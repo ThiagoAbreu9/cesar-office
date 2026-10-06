@@ -8,6 +8,7 @@ import { loadConfig } from './config.ts';
 import { RealtimeService } from './application/realtime-service.ts';
 import { Gateway } from './interface/ws-gateway.ts';
 import { HmacTicketCodec } from '@cesar-office/ticket';
+import { DemoHttp } from './interface/demo-http.ts';
 import { DisabledMedia, LiveKitAudioGateway } from './infrastructure/livekit-media.ts';
 import { InMemoryChatStore, InMemoryDeskRepository, InMemoryOrgBus } from './infrastructure/memory-adapters.ts';
 import { cryptoIds, FileMapRepository, jsonLogger, systemClock } from './infrastructure/system.ts';
@@ -21,8 +22,11 @@ const media =
     : new DisabledMedia();
 if (!media.enabled) log.warn('LiveKit não configurado: áudio desabilitado');
 
+// Uma instância só: o nonce de uso único precisa ser o mesmo para hello e para o modo demo.
+const tickets = new HmacTicketCodec({ secret: cfg.TICKET_SECRET });
+
 const service = new RealtimeService({
-  tickets: new HmacTicketCodec({ secret: cfg.TICKET_SECRET }),
+  tickets,
   maps: new FileMapRepository(resolve(cfg.MAPS_DIR), cfg.MAPS_PUBLIC_URL),
   media,
   chat: new InMemoryChatStore(),
@@ -34,7 +38,15 @@ const service = new RealtimeService({
   instanceConfig: { maxCcu: cfg.MAX_INSTANCE_CCU },
 });
 
-const gateway = new Gateway(service, { port: cfg.PORT, allowedOrigins: cfg.ALLOWED_ORIGINS }, log);
+const demo = new DemoHttp({
+  mapsDir: resolve(cfg.MAPS_DIR),
+  allowedOrigins: cfg.ALLOWED_ORIGINS,
+  tickets: cfg.DEMO_MODE ? tickets : null,
+  publicWsUrl: cfg.PUBLIC_WS_URL,
+});
+if (cfg.DEMO_MODE) log.warn('DEMO_MODE ativo: qualquer pessoa entra só com um nome (somente desenvolvimento)');
+
+const gateway = new Gateway(service, { port: cfg.PORT, allowedOrigins: cfg.ALLOWED_ORIGINS, http: (req, res) => demo.handle(req, res) }, log);
 await gateway.listen();
 
 for (const sig of ['SIGTERM', 'SIGINT'] as const) {

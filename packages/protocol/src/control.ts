@@ -102,7 +102,8 @@ export type ServerMsg =
   | { readonly t: 'entity_enter'; readonly entity: EntityInfo }
   | { readonly t: 'entity_leave'; readonly netIds: readonly number[] }
   | { readonly t: 'entity_meta'; readonly netId: number; readonly displayName?: string; readonly status?: PresenceStatus }
-  | { readonly t: 'presence'; readonly userId: string; readonly status: PresenceStatus | 'offline' }
+  /** Roster da org: enviado para cada pessoa online ao entrar (estado inicial) e a cada mudança. */
+  | { readonly t: 'presence'; readonly userId: string; readonly status: PresenceStatus | 'offline'; readonly displayName?: string }
   | { readonly t: 'correction'; readonly seq: number; readonly x: number; readonly y: number; readonly reason: CorrectionReason }
   | { readonly t: 'zone'; readonly zoneKey: string | null; readonly name?: string; readonly occupancy?: number; readonly capacity?: number }
   | { readonly t: 'audible'; readonly peers: readonly AudiblePeer[]; readonly bubbleId: string | null }

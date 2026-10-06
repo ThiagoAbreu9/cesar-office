@@ -12,7 +12,11 @@ const Env = z
     TICKET_SECRET: z.string().min(32, 'TICKET_SECRET precisa de ≥ 32 caracteres'),
     ALLOWED_ORIGINS: csv,
     MAPS_DIR: z.string().default('../../packages/world/maps'),
-    MAPS_PUBLIC_URL: z.string().url().default('http://localhost:5173/maps'),
+    MAPS_PUBLIC_URL: z.string().url().default('http://localhost:4100/maps'),
+    /** URL wss que o navegador usa para este nó (devolvida pelo modo demo). */
+    PUBLIC_WS_URL: z.string().regex(/^wss?:\/\//).default('ws://localhost:4100/ws'),
+    /** Entrar só com nome, sem conta. Proibido em produção. */
+    DEMO_MODE: z.enum(['true', 'false', '1', '0']).default('false').transform((v) => v === 'true' || v === '1'),
     MAX_INSTANCE_CCU: z.coerce.number().int().min(1).max(1000).default(150),
     LIVEKIT_URL: z.string().url().optional(),
     LIVEKIT_API_URL: z.string().url().optional(),
@@ -23,6 +27,7 @@ const Env = z
   .superRefine((e, ctx) => {
     const lk = [e.LIVEKIT_URL, e.LIVEKIT_API_URL, e.LIVEKIT_API_KEY, e.LIVEKIT_API_SECRET];
     if (lk.some(Boolean) && !lk.every(Boolean)) ctx.addIssue({ code: 'custom', message: 'Defina todas as LIVEKIT_* ou nenhuma' });
+    if (e.NODE_ENV === 'production' && e.DEMO_MODE) ctx.addIssue({ code: 'custom', message: 'DEMO_MODE é proibido em produção' });
     if (e.NODE_ENV === 'production' && e.ALLOWED_ORIGINS.length === 0) ctx.addIssue({ code: 'custom', message: 'ALLOWED_ORIGINS é obrigatório em produção' });
   });
 

@@ -14,7 +14,7 @@ export interface GameEvents extends Record<string, unknown> {
   'world:correction': { readonly reason: ServerMsgOf<'correction'>['reason'] };
   'world:interact-prompt': { readonly objectKey: string; readonly label: string } | null;
   'world:open-portal': { readonly objectKey: string; readonly name: string; readonly url: string };
-  'presence:changed': { readonly userId: string; readonly status: PresenceStatus | 'offline' };
+  'presence:changed': { readonly userId: string; readonly status: PresenceStatus | 'offline'; readonly displayName?: string };
   'chat:message': ServerMsgOf<'chat'>;
   'chat:ack': ServerMsgOf<'chat_ack'>;
   'call:received': ServerMsgOf<'call_received'>;

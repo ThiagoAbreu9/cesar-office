@@ -13,4 +13,8 @@ export interface SceneServices {
   readonly session: GameSession;
   readonly bus: EventBus<GameEvents>;
   readonly assetBaseUrl: string;
+  /** 'files' = PNGs/fontes em assetBaseUrl; 'placeholder' = arte gerada por código (MVP). */
+  readonly art?: 'files' | 'placeholder';
+  /** JSON Tiled já em memória (sandbox/arquivo único) — evita buscar `welcome.map.url`. */
+  readonly inlineMap?: unknown;
 }

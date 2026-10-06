@@ -4,7 +4,7 @@
  *
  * Camada: application (05 §2). Dependências de infraestrutura entram pelo construtor.
  */
-import { packState, WORLD, type ClientMsg, type ServerMsg, type ServerMsgOf, type SnapshotFrame } from '@cesar-office/protocol';
+import { packState, WORLD, type ClientMsg, type PresenceStatus, type ServerMsg, type ServerMsgOf, type SnapshotFrame } from '@cesar-office/protocol';
 import { Connection, type ConnectionDeps } from '../net/connection.ts';
 import { ServerClock, TickTimeline } from '../net/server-clock.ts';
 import { WorldState } from '../ecs/world-state.ts';
@@ -26,6 +26,11 @@ export interface SessionViewHooks {
 export class GameSession {
   readonly clock: ServerClock;
   readonly world = new WorldState();
+  /**
+   * Quem está online na org (fora da AOI também). Mantido aqui, e não na UI, porque o estado
+   * inicial chega logo após o welcome — antes de qualquer componente se inscrever no bus.
+   */
+  readonly roster = new Map<string, { displayName: string; status: PresenceStatus }>();
   readonly connection: Connection;
   private readonly timeline = new TickTimeline();
   private welcome: ServerMsgOf<'welcome'> | null = null;
@@ -152,9 +157,13 @@ export class GameSession {
         else this.view?.onCorrection(m.x, m.y);
         bus.emit('world:correction', { reason: m.reason });
         return;
-      case 'presence':
-        bus.emit('presence:changed', { userId: m.userId, status: m.status });
+      case 'presence': {
+        const prev = this.roster.get(m.userId);
+        if (m.status === 'offline') this.roster.delete(m.userId);
+        else this.roster.set(m.userId, { displayName: m.displayName ?? prev?.displayName ?? '', status: m.status });
+        bus.emit('presence:changed', { userId: m.userId, status: m.status, ...(m.displayName ? { displayName: m.displayName } : {}) });
         return;
+      }
       case 'zone':
         bus.emit('world:zone', m);
         return;

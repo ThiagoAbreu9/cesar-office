@@ -9,8 +9,8 @@ import type { ChatRecord, ChatStore, DeskRepository, OrgBus, OrgBusHandlers } fr
 export class InMemoryOrgBus implements OrgBus {
   private readonly subs = new Map<string, Set<OrgBusHandlers>>();
 
-  publishPresence(orgId: string, userId: string, status: Parameters<OrgBusHandlers['presence']>[1]): void {
-    for (const h of this.subs.get(orgId) ?? []) h.presence(userId, status);
+  publishPresence(orgId: string, userId: string, status: Parameters<OrgBusHandlers['presence']>[1], displayName?: string): void {
+    for (const h of this.subs.get(orgId) ?? []) h.presence(userId, status, displayName);
   }
 
   publishChat(orgId: string, msg: ServerMsgOf<'chat'>): void {

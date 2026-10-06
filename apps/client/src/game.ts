@@ -27,6 +27,8 @@ export interface CreateGameOptions {
   readonly session: GameSession;
   readonly bus: EventBus<GameEvents>;
   readonly assetBaseUrl: string;
+  readonly art?: 'files' | 'placeholder';
+  readonly inlineMap?: unknown;
 }
 
 const browserTimers: Timers = {
@@ -48,7 +50,13 @@ export function createBrowserSession(bus: EventBus<GameEvents>): GameSession {
 }
 
 export function createGame(opts: CreateGameOptions): GameHandle {
-  const services: SceneServices = { session: opts.session, bus: opts.bus, assetBaseUrl: opts.assetBaseUrl };
+  const services: SceneServices = {
+    session: opts.session,
+    bus: opts.bus,
+    assetBaseUrl: opts.assetBaseUrl,
+    ...(opts.art ? { art: opts.art } : {}),
+    ...(opts.inlineMap !== undefined ? { inlineMap: opts.inlineMap } : {}),
+  };
 
   const game = new Phaser.Game({
     type: Phaser.AUTO,

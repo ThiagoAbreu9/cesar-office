@@ -163,10 +163,19 @@ Medir antes de otimizar mais: `game.loop.actualFps`, tempo de `RenderSystem.upda
 - [ ] Acessibilidade: navegação por teclado da lista de pessoas ("Ir até") e prompts de interação anunciados por `aria-live` na UI
 - [ ] Bundle: Phaser como chunk separado carregado só na rota do escritório
 
+## 8.1 App web e modo demonstração (ADR-0010)
+
+`apps/web` (React 18 + Vite) monta o jogo e a interface: crachá de entrada, HUD (lugar, status, microfone, sair), "Na conversa", "No escritório agora" com "Ir até", e chat Aqui / Todo o escritório. O pacote do cliente é consumido por `@cesar-office/client` (`src/index.ts`).
+
+- **Backend** (`apps/web/src/backend.ts`): `ServerBackend` entra pelo `POST /demo/join` e abre o WebSocket real; `SandboxBackend` roda o `RealtimeService` na página com bots (`src/sandbox/`).
+- **Arte provisória** (`scenes/placeholder-art.ts`): tileset e folhas de avatar 32 × 48 desenhados em canvas com a paleta do `06`. `createGame({ art: 'placeholder', inlineMap })` dispensa arquivos — é o que permite o build em arquivo único. Os assets reais substituem sem mudar cenas.
+- **Rótulos** caem para `Text` quando a fonte bitmap `ui-8` não está carregada.
+- **Anel de conversa**: `WorldScene` desenha elipses sob você e sob quem você ouve, com linhas; quem fala fica verde (`media:speaking`).
+
 ## 9. Pendências
 
 1. ~~Camada de mídia~~ — feita em `media/audio-media.ts` (somente áudio). Falta UI de seleção de dispositivo de entrada e o botão "ativar áudio" quando o navegador bloquear autoplay (`media:needs-gesture`).
-2. **Balões de chat** sobre o avatar (RN-M5-6) e **anel de bolha** (M2 fluxo passo 2): usar `bubbleId` do `media:audible` — desenhar com um `Graphics` por bolha, recalculado só quando o conjunto muda.
+2. **Balões de chat** sobre o avatar (RN-M5-6). O **anel de conversa** foi feito (§8.1); falta agrupar por `bubbleId`: usar `bubbleId` do `media:audible` — desenhar com um `Graphics` por bolha, recalculado só quando o conjunto muda.
 3. **Escurecer fora da zona privada** (M3 fluxo passo 1): máscara ou retângulo com `Depth.FurnitureAbove + 1` recortando a zona atual.
 4. **Clique em avatar** para abrir cartão do colega (hit area no sprite).
 5. ~~Servidor realtime~~ — implementado (`04 §11`). A `WorldScene` agora lê colisão, zonas e interativos com o mesmo `loadWorldMap` do servidor.

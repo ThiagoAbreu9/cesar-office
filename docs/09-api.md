@@ -78,6 +78,17 @@ Resposta de `POST /orgs/:orgId/spaces/:spaceId/join` (`cache-control: no-store`)
 }
 ```
 
+### Modo demonstração (serviço Realtime, ADR-0010)
+
+Só existem com `DEMO_MODE=true`, que é recusado em produção.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/demo/join` | `{ name: 1–40 caracteres, body: 0–2 }` → `{ wsUrl, ticket }`. Ticket de convidado para a org/espaço fixos `demo_sede`. 10 por minuto por IP (`429`) |
+| GET | `/maps/:mapId.json` | JSON Tiled do mapa. Servido também fora do modo demo (`MAPS_PUBLIC_URL`) |
+
+CORS: só origens de `ALLOWED_ORIGINS` recebem `access-control-allow-origin`.
+
 ### Chat (histórico)
 
 | Método | Rota | Descrição |
@@ -126,7 +137,7 @@ Conexão: `wss://<nó>/ws`, frames **binários**, `binaryType = 'arraybuffer'`. 
 | `entity_enter` | `entity: EntityInfo` | Entidade entrou na AOI |
 | `entity_leave` | `netIds[]` | Saíram da AOI |
 | `entity_meta` | `netId`, `displayName?`, `status?` | Nome/status mudou |
-| `presence` | `userId`, `status \| offline` | Mudança de presença na org |
+| `presence` | `userId`, `status \| offline`, `displayName?` | Mudança de presença na org. Logo após `welcome`/`resumed`, o servidor envia um `presence` por pessoa online da org (roster inicial) |
 | `correction` | `seq`, `x`, `y`, `reason: speed\|collision\|zone_full\|zone_forbidden\|teleport` | Input rejeitado ou teleporte autorizado |
 | `zone` | `zoneKey \| null`, `name?`, `occupancy?`, `capacity?` | Mudou de zona |
 | `audible` | `peers[{userId, volume}]`, `bubbleId` | Conjunto audível mudou |

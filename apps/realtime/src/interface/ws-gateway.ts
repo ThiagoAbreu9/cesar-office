@@ -17,6 +17,8 @@ export interface GatewayOptions {
   readonly allowedOrigins: readonly string[];
   readonly tickMs?: number;
   readonly path?: string;
+  /** Rotas HTTP extras (mapas, modo demo). Retorna true se tratou. */
+  readonly http?: (req: IncomingMessage, res: import('node:http').ServerResponse) => boolean;
 }
 
 const ACTION_TYPES: ReadonlySet<ClientMsg['t']> = new Set(['set_status', 'interact', 'claim_desk', 'go_to', 'call', 'call_response']);
@@ -44,6 +46,7 @@ export class Gateway {
     private readonly log: Logger,
   ) {
     this.http = createServer((req, res) => {
+      if (opts.http?.(req, res)) return;
       if (req.url === '/healthz') {
         res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
         return;

@@ -11,7 +11,7 @@ import { Depth, TextureKeys } from '../../world/map-contract.ts';
 
 interface View {
   sprite: Phaser.GameObjects.Sprite;
-  label: Phaser.GameObjects.BitmapText;
+  label: Phaser.GameObjects.BitmapText | Phaser.GameObjects.Text;
   dot: Phaser.GameObjects.Image;
   animKey: string;
   status: PresenceStatus | null;
@@ -58,7 +58,7 @@ export class RenderSystem {
       if (s.ghost) v.sprite.setAlpha(GHOST_ALPHA);
       else if (v.sprite.alpha === GHOST_ALPHA) v.sprite.setAlpha(1);
       v.label.setPosition(x, y + LABEL_OFFSET_Y);
-      v.dot.setPosition(x - v.label.width / 2 - 6, y + LABEL_OFFSET_Y + 4);
+      v.dot.setPosition(x - v.label.width / 2 - 6, y + LABEL_OFFSET_Y - v.label.height / 2);
 
       if (meta) {
         if (v.label.text !== meta.displayName) v.label.setText(meta.displayName);
@@ -108,7 +108,7 @@ export class RenderSystem {
     if (!v) {
       v = {
         sprite: this.scene.add.sprite(0, 0, TextureKeys.Avatar(body)).setOrigin(0.5, 0.85),
-        label: this.scene.add.bitmapText(0, 0, TextureKeys.UiFont, '', 8).setOrigin(0.5, 1).setDepth(Depth.Labels),
+        label: this.makeLabel(),
         dot: this.scene.add.image(0, 0, TextureKeys.StatusDot).setDepth(Depth.Labels),
         animKey: '',
         status: null,
@@ -121,6 +121,18 @@ export class RenderSystem {
     for (const o of [v.sprite, v.label, v.dot]) o.setVisible(true).setActive(true).setAlpha(1);
     v.label.setText(meta?.displayName ?? '');
     this.views.set(eid, v);
+  }
+
+  /** BitmapText quando a fonte existe (produção); Text nítido como reserva (arte provisória). */
+  private makeLabel(): Phaser.GameObjects.BitmapText | Phaser.GameObjects.Text {
+    if (this.scene.cache.bitmapFont.exists(TextureKeys.UiFont)) {
+      return this.scene.add.bitmapText(0, 0, TextureKeys.UiFont, '', 8).setOrigin(0.5, 1).setDepth(Depth.Labels);
+    }
+    return this.scene.add
+      .text(0, 0, '', { fontFamily: 'system-ui, sans-serif', fontSize: '9px', color: '#ffffff', backgroundColor: '#1B1F2Acc', padding: { x: 3, y: 1 } })
+      .setResolution(4)
+      .setOrigin(0.5, 1)
+      .setDepth(Depth.Labels);
   }
 
   private release(eid: number): void {

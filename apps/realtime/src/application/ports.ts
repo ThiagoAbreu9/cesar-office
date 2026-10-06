@@ -46,13 +46,13 @@ export interface ChatStore {
 
 /** Barramento por organização entre nós realtime (Redis pub/sub em produção). */
 export interface OrgBus {
-  publishPresence(orgId: string, userId: string, status: PresenceStatus | 'offline'): void;
+  publishPresence(orgId: string, userId: string, status: PresenceStatus | 'offline', displayName?: string): void;
   publishChat(orgId: string, msg: ServerMsgOf<'chat'>): void;
   subscribe(orgId: string, handlers: OrgBusHandlers): () => void;
 }
 
 export interface OrgBusHandlers {
-  presence(userId: string, status: PresenceStatus | 'offline'): void;
+  presence(userId: string, status: PresenceStatus | 'offline', displayName?: string): void;
   chat(msg: ServerMsgOf<'chat'>): void;
 }
 

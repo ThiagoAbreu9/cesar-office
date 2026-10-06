@@ -6,6 +6,7 @@ import Phaser from 'phaser';
 import { SceneKeys, type SceneServices } from './scene-keys.ts';
 import { TextureKeys } from '../world/map-contract.ts';
 import { animKey } from '../ecs/systems/render-system.ts';
+import { registerPlaceholderArt } from './placeholder-art.ts';
 
 /** Corpos disponíveis no MVP (06 §6). */
 const AVATAR_BODIES = [0, 1, 2] as const;
@@ -39,7 +40,14 @@ export class PreloadScene extends Phaser.Scene {
     bar.x -= barMax / 2;
     this.load.on(Phaser.Loader.Events.PROGRESS, (p: number) => bar.setSize(barMax * p, 6));
 
-    this.load.tilemapTiledJSON(mapCacheKey(welcome.map.mapId, welcome.map.version), welcome.map.url);
+    const mapKey = mapCacheKey(welcome.map.mapId, welcome.map.version);
+    if (this.services.inlineMap !== undefined) {
+      this.cache.tilemap.add(mapKey, { format: Phaser.Tilemaps.Formats.TILED_JSON, data: this.services.inlineMap });
+    } else {
+      this.load.tilemapTiledJSON(mapKey, welcome.map.url);
+    }
+    if (this.services.art === 'placeholder') return;
+
     this.load.image(TextureKeys.Tiles, `${base}/tilesets/office-32.png`);
     this.load.image(TextureKeys.StatusDot, `${base}/ui/status-dot.png`);
     this.load.bitmapFont(TextureKeys.UiFont, `${base}/fonts/ui-8.png`, `${base}/fonts/ui-8.xml`);
@@ -49,6 +57,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (this.services.art === 'placeholder') registerPlaceholderArt(this.textures, AVATAR_BODIES);
     for (const b of AVATAR_BODIES) this.createAvatarAnims(b);
     this.scene.start(SceneKeys.World, this.services);
   }

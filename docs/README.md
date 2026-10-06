@@ -16,7 +16,7 @@ Escritório virtual 2D pixel art multiplayer, **somente áudio**. Gerado pela eq
 | 07 | [PRD do MVP](07-prd-mvp.md) | technical-writer | Requisitos rastreados, critérios de lançamento |
 | 08 | [User stories](08-user-stories.md) | technical-writer | Épicos e critérios Gherkin |
 | 09 | [API](09-api.md) | technical-writer | REST + protocolo WebSocket |
-| ADR | [0001](adr/0001-phaser-4-no-cliente.md) · [0002](adr/0002-websocket-binario-sem-socketio.md) · [0003](adr/0003-livekit-sfu-salas-por-zona.md) · [0004](adr/0004-realtime-separado-afinidade-pela-api.md) · [0005](adr/0005-predicao-cliente-validacao-servidor.md) · [0006](adr/0006-multitenant-org-id-rls.md) · [0007](adr/0007-chat-de-bolha-nao-persistido.md) · [0008](adr/0008-produto-somente-audio.md) · [0009](adr/0009-api-fastify-sem-nestjs.md) | — | Decisões arquiteturais |
+| ADR | [0001](adr/0001-phaser-4-no-cliente.md) · [0002](adr/0002-websocket-binario-sem-socketio.md) · [0003](adr/0003-livekit-sfu-salas-por-zona.md) · [0004](adr/0004-realtime-separado-afinidade-pela-api.md) · [0005](adr/0005-predicao-cliente-validacao-servidor.md) · [0006](adr/0006-multitenant-org-id-rls.md) · [0007](adr/0007-chat-de-bolha-nao-persistido.md) · [0008](adr/0008-produto-somente-audio.md) · [0009](adr/0009-api-fastify-sem-nestjs.md) · [0010](adr/0010-modo-demo-sem-login.md) | — | Decisões arquiteturais |
 
 ## Leitura por perfil
 

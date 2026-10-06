@@ -240,7 +240,8 @@ export class RealtimeService {
       entities: r.entities,
     });
     await this.announceZoneAndMedia(s, claims.userId, h);
-    this.d.bus.publishPresence(claims.orgId, claims.userId, h.instance.statusOf(claims.userId) ?? claims.status);
+    this.sendRoster(s, claims.orgId);
+    this.d.bus.publishPresence(claims.orgId, claims.userId, h.instance.statusOf(claims.userId) ?? claims.status, claims.displayName);
   }
 
   private async resume(s: Session, token: string): Promise<void> {
@@ -250,6 +251,7 @@ export class RealtimeService {
       if (!r) continue;
       this.bind(s, r.userId, h.orgId, h);
       this.send(s, { t: 'resumed', tick: h.instance.tick, entities: r.entities, resumeToken: r.resumeToken });
+      this.sendRoster(s, h.orgId);
       await this.announceZoneAndMedia(s, r.userId, h);
       return;
     }
@@ -274,6 +276,20 @@ export class RealtimeService {
     s.orgId = orgId;
     s.instance = h;
     this.byUser.set(userId, s);
+  }
+
+  /**
+   * Estado inicial da lista de pessoas: quem está online na org NESTE nó.
+   * Com vários nós (V1), vem do hash `presence:org:{id}` no Redis (04 §6).
+   */
+  private sendRoster(s: Session, orgId: string): void {
+    for (const other of this.byUser.values()) {
+      if (other === s || other.orgId !== orgId || other.state !== 'online' || !other.userId || !other.instance) continue;
+      const status = other.instance.instance.statusOf(other.userId);
+      if (!status) continue;
+      const displayName = other.instance.instance.displayNameOf(other.userId);
+      this.send(s, { t: 'presence', userId: other.userId, status, ...(displayName ? { displayName } : {}) });
+    }
   }
 
   private async announceZoneAndMedia(s: Session, userId: string, h: Hosted): Promise<void> {
@@ -400,7 +416,7 @@ export class RealtimeService {
       },
       statusChanged: (userId, status) => {
         const h = hosted();
-        if (h) this.d.bus.publishPresence(h.orgId, userId, status);
+        if (h) this.d.bus.publishPresence(h.orgId, userId, status, h.instance.displayNameOf(userId));
       },
       abuse: (userId) => {
         const s = this.byUser.get(userId);
@@ -423,7 +439,7 @@ export class RealtimeService {
       return;
     }
     const unsubscribe = this.d.bus.subscribe(orgId, {
-      presence: (userId, status) => this.broadcastOrg(orgId, { t: 'presence', userId, status }),
+      presence: (userId, status, displayName) => this.broadcastOrg(orgId, { t: 'presence', userId, status, ...(displayName ? { displayName } : {}) }),
       chat: (msg) => this.broadcastOrg(orgId, msg),
     });
     this.orgSubs.set(orgId, { count: 1, unsubscribe });

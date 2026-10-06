@@ -8,7 +8,7 @@ import Phaser from 'phaser';
 import { WORLD } from '@cesar-office/protocol';
 import { SceneKeys, type SceneServices } from './scene-keys.ts';
 import { mapCacheKey } from './preload-scene.ts';
-import { findPath, loadWorldMap, type CollisionGrid, type Interactable, type TiledMap } from '@cesar-office/world';
+import { findPath, loadWorldMap, type CollisionGrid, type Interactable, type TiledMap, type WorldMap } from '@cesar-office/world';
 import { Depth, MapLayers, TextureKeys, TilesetNames } from '../world/map-contract.ts';
 import { KeyboardIntent } from '../input/keyboard-intent.ts';
 import { CompositeIntent, PathFollower } from '../ecs/systems/movement-intent.ts';
@@ -16,7 +16,7 @@ import { LocalMovementSystem } from '../ecs/systems/local-movement-system.ts';
 import { NetSendSystem } from '../ecs/systems/net-send-system.ts';
 import { InterpolationSystem } from '../ecs/systems/interpolation-system.ts';
 import { RenderSystem } from '../ecs/systems/render-system.ts';
-import { Position } from '../ecs/components.ts';
+import { Position, RenderPosition } from '../ecs/components.ts';
 import type { Unsubscribe } from '../core/event-bus.ts';
 
 const FIXED_STEP_MS = 1000 / 60;
@@ -42,6 +42,9 @@ export class WorldScene extends Phaser.Scene {
   private accumulator = 0;
   private cameraBound = false;
   private readonly unsubs: Unsubscribe[] = [];
+  private ring!: Phaser.GameObjects.Graphics;
+  private audible = new Set<string>();
+  private speaking = new Set<string>();
 
   constructor() {
     super(SceneKeys.World);
@@ -83,6 +86,8 @@ export class WorldScene extends Phaser.Scene {
     const world = loadWorldMap(raw.data);
     this.grid = world.grid;
     this.interactables = [...world.interactables];
+    this.decorate(world);
+    this.ring = this.add.graphics().setDepth(Depth.FurnitureBelow + 1);
 
     // ── Sistemas ──
     const kb = this.input.keyboard;
@@ -116,6 +121,12 @@ export class WorldScene extends Phaser.Scene {
 
     this.unsubs.push(
       bus.on('ui:focus-game', ({ focused }) => this.keyboard.setEnabled(focused)),
+      bus.on('media:audible', ({ peers }) => {
+        this.audible = new Set(peers.map((p) => p.userId));
+      }),
+      bus.on('media:speaking', ({ userIds }) => {
+        this.speaking = new Set(userIds);
+      }),
       bus.on('ui:interact', ({ objectKey }) => {
         const it = this.interactables.find((i) => i.key === objectKey);
         if (it) this.activate(it);
@@ -138,8 +149,61 @@ export class WorldScene extends Phaser.Scene {
     this.netSend.update();
     this.interpolation.update();
     this.render.update(this.interpolation.teleported);
+    this.drawConversationRing();
     this.bindCameraOnce();
     this.updatePrompt();
+  }
+
+  // ───────────────────────────── leitura do espaço ─────────────────────────────
+
+  /**
+   * Regras visíveis no chão (06 §6): tapete de sala privada com nome e capacidade,
+   * cadeiras e quadros marcados. Com arte final, o tapete vira tiles e isto some.
+   */
+  private decorate(world: WorldMap): void {
+    const g = this.add.graphics().setDepth(Depth.Floor + 2);
+    for (const z of world.zones) {
+      g.fillStyle(0x2f6feb, 0.18).fillRect(z.rect.x, z.rect.y, z.rect.w, z.rect.h);
+      g.lineStyle(2, 0x8fb4ff, 0.9).strokeRect(z.rect.x + 1, z.rect.y + 1, z.rect.w - 2, z.rect.h - 2);
+      this.add
+        .text(z.rect.x + 8, z.rect.y + 6, `${z.name} · até ${z.capacity}`, { fontFamily: 'system-ui, sans-serif', fontSize: '10px', color: '#ffffff', backgroundColor: '#2F6FEBcc', padding: { x: 4, y: 2 } })
+        .setResolution(4)
+        .setDepth(Depth.Floor + 3);
+    }
+    const objects = this.add.graphics().setDepth(Depth.FurnitureBelow);
+    for (const it of world.interactables) {
+      if (it.type === 'chair') {
+        objects.fillStyle(it.deskKey ? 0x4a5163 : 0x6e7689, 1).fillRoundedRect(it.x - 9, it.y - 9, 18, 18, 4);
+        objects.fillStyle(0x2e3442, 1).fillRoundedRect(it.x - 7, it.y - 7, 14, 14, 3);
+      } else if (it.type === 'portal') {
+        objects.fillStyle(0xe6e2d6, 1).fillRect(it.x - 14, it.y - 12, 28, 18);
+        objects.lineStyle(2, 0x5c3a2e, 1).strokeRect(it.x - 14, it.y - 12, 28, 18);
+        objects.fillStyle(0x2f6feb, 1).fillRect(it.x - 10, it.y - 8, 12, 2).fillRect(it.x - 10, it.y - 4, 18, 2);
+      }
+    }
+  }
+
+  /** Anel da conversa (03 M2): quem eu ouço agora, e quem está falando. */
+  private drawConversationRing(): void {
+    const g = this.ring;
+    g.clear();
+    const world = this.services.session.world;
+    const local = world.localEntity;
+    if (local === null || this.audible.size === 0) return;
+    const pulse = 0.55 + 0.25 * Math.sin(this.time.now / 300);
+    const ringAt = (eid: number, talking: boolean): void => {
+      const x = RenderPosition.x[eid] ?? 0;
+      const y = RenderPosition.y[eid] ?? 0;
+      g.lineStyle(talking ? 3 : 2, talking ? 0x3fb950 : 0x8fb4ff, talking ? 1 : pulse).strokeEllipse(x, y + 2, 34, 14);
+    };
+    const meta = world.metaOf(local);
+    ringAt(local, meta ? this.speaking.has(meta.userId) : false);
+    for (const userId of this.audible) {
+      const eid = world.entityOfUser(userId);
+      if (eid === undefined) continue;
+      ringAt(eid, this.speaking.has(userId));
+      g.lineStyle(1, 0x8fb4ff, 0.35).lineBetween(RenderPosition.x[local] ?? 0, (RenderPosition.y[local] ?? 0) + 2, RenderPosition.x[eid] ?? 0, (RenderPosition.y[eid] ?? 0) + 2);
+    }
   }
 
   // ───────────────────────────── interação ─────────────────────────────

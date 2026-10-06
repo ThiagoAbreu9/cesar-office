@@ -34,6 +34,17 @@ export class WorldState {
     return this.byNetId.get(netId);
   }
 
+  /** Entidade de um usuário (busca linear: AOI tem ~100 entidades). */
+  entityOfUser(userId: string): EntityId | undefined {
+    for (const [eid, m] of this.meta) if (m.userId === userId) return eid;
+    return undefined;
+  }
+
+  /** Metadados de todas as entidades conhecidas (AOI + local). */
+  entries(): IterableIterator<[EntityId, EntityMeta]> {
+    return this.meta.entries();
+  }
+
   metaOf(eid: EntityId): EntityMeta | undefined {
     return this.meta.get(eid);
   }
