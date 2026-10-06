@@ -30,6 +30,7 @@ Os nomes abaixo são **exatamente** os de `map-contract.ts`. Mudou aqui, muda l�
 | 6 | `collision` | tiles, **invisível** | Qualquer tile não vazio = bloqueado | — |
 | 7 | `zones` | objetos | Retângulos de zona | — |
 | 8 | `objects` | objetos | Pontos/retângulos interativos | — |
+| 9 | `props` | objetos (opcional) | Mobília e decoração desenhadas como sprites; a classe é o tipo | y-sort pela base (`Actors + y`), tapetes no chão, quadros na parede |
 
 Tileset: nome `office` no Tiled, imagem `tilesets/office-32.png`, *margin* 0, *spacing* 0. Use a classe do objeto (campo **Class**, Tiled ≥ 1.9) para o tipo.
 
@@ -47,6 +48,20 @@ Tileset: nome `office` no Tiled, imagem `tilesets/office-32.png`, *margin* 0, *s
 | `door` | `key`, `zoneKey` | não | Retângulo cobrindo o vão; 2 tiles de largura no MVP |
 | `chair` | `key`, `deskKey` (opcional) | **não** (o avatar senta nele) | A mesa à frente colide; a cadeira não. `deskKey` só em mesas de trabalho |
 | `portal` | `key`, `url` (string, pode ficar vazia — admin configura) | sim (o objeto físico) | Ponto de interação a ≤ 1,5 tile da face acessível (P-11) |
+
+**Camada `props` (só visual — o servidor ignora)**
+
+Mobília grande vira sprite único em vez de mosaico de tiles: fica mais bonita, ordena por profundidade com os avatares e troca de arte sem mexer na colisão. **Quem bloqueia continua sendo a `collision`**: um prop sólido precisa estar sobre tiles bloqueados (teste em `packages/world`).
+
+| Class | Pegada no mapa Sede | Notas |
+|---|---|---|
+| `desk-island` | 4 × 2 tiles | Duas mesas de costas, divisória; monitores de frente para quem senta |
+| `meeting-table` | interior da sala menos 2 tiles de cada lado | Notebooks e viva-voz |
+| `reception-desk`, `sofa`, `coffee`, `fridge`, `microwave`, `arcade`, `plant`, `bistro`, `tv` | conforme a planta (§3) | `coffee` e `arcade` respondem ao **E** (reação local, `03 M9`) |
+| `rug` | livre, sem colisão | Propriedade `color` (`ipe`, `copa`) |
+| `wall-logo`, `wall-clock`, `wall-art` | sobre a face da parede (linha logo acima do piso) | `variant` escolhe a arte |
+
+Pisos por ambiente (gids do tileset `office`): tábuas na área de trabalho (1, 5), pedra na recepção (6, 7), carpete azul na Jatobá (8), carpete ipê na Ipê (9), xadrez na copa (10, 11), cimento queimado no corredor (12, 13), soleira nas portas (14). Paredes em 3/4: face (3), topo (15), janela na fachada norte (16), faixa ipê na recepção (17). Gerado por `maps/build-sede.ts`.
 
 **Validações no upload do mapa (servidor rejeita se falhar):** `key` únicos; toda `private` tem `door` com `zoneKey` correspondente; todo `chair` está sobre tile livre na `collision`; todo `spawn` tem ≥ 20 tiles livres; nenhuma zona privada sobreposta a outra.
 

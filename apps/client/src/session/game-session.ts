@@ -176,6 +176,9 @@ export class GameSession {
       case 'media_leave':
         bus.emit('media:leave', m);
         return;
+      case 'emote_shown':
+        bus.emit('world:emote', { netId: m.netId, kind: m.kind });
+        return;
       case 'chat':
         bus.emit('chat:message', m);
         return;
@@ -212,7 +215,8 @@ export class GameSession {
       bus.on('ui:go-to', ({ userId }) => void this.send({ t: 'go_to', targetUserId: userId })),
       bus.on('ui:call', ({ userId }) => void this.send({ t: 'call', targetUserId: userId })),
       bus.on('ui:call-response', ({ callId, accept }) => void this.send({ t: 'call_response', callId, accept })),
-      bus.on('ui:interact', ({ objectKey }) => void this.send({ t: 'interact', objectKey })),
+      // ui:interact é da WorldScene: ela decide entre abrir portal (local) e pedir ao servidor (cadeira).
+      bus.on('ui:emote', ({ kind }) => void this.send({ t: 'emote', kind })),
     );
   }
 }

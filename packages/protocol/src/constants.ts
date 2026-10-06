@@ -3,7 +3,8 @@
  * Fontes: 02-arquitetura §12 (orçamentos) e 03-mecanicas (tabela de parâmetros P-xx).
  * Mudou algo aqui? Bump de PROTOCOL_VERSION se afetar o formato no fio.
  */
-export const PROTOCOL_VERSION = 1;
+/** v2: emotes (`emote` / `emote_shown`). */
+export const PROTOCOL_VERSION = 2;
 
 /** Opcode no primeiro byte de todo frame binário. */
 export const Op = {

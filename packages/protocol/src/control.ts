@@ -42,6 +42,11 @@ export interface AudiblePeer {
 // ───────────────────────────── Cliente → servidor ─────────────────────────────
 
 const uuid = z.string().uuid();
+
+/** Reações rápidas sobre o avatar (03 M5). Lista fechada: o cliente desenha cada uma em pixel art. */
+export const EmoteKind = z.enum(['wave', 'coffee', 'thumbs', 'laugh', 'heart', 'idea']);
+export type EmoteKind = z.infer<typeof EmoteKind>;
+export const EMOTE_KINDS: readonly EmoteKind[] = EmoteKind.options;
 const objectKey = z.string().min(1).max(64).regex(/^[a-zA-Z0-9_.:-]+$/);
 
 export const ClientMsg = z.discriminatedUnion('t', [
@@ -61,6 +66,7 @@ export const ClientMsg = z.discriminatedUnion('t', [
     body: z.string().trim().min(1).max(WORLD.CHAT_MAX_CHARS),
   }),
   z.object({ t: z.literal('interact'), objectKey }),
+  z.object({ t: z.literal('emote'), kind: EmoteKind }),
   z.object({ t: z.literal('claim_desk'), deskKey: objectKey }),
   z.object({ t: z.literal('go_to'), targetUserId: uuid }),
   z.object({ t: z.literal('call'), targetUserId: uuid }),
@@ -127,6 +133,8 @@ export type ServerMsg =
     }
   | { readonly t: 'call_received'; readonly callId: string; readonly fromUserId: string; readonly fromName: string; readonly expiresAt: number }
   | { readonly t: 'call_result'; readonly callId: string; readonly accepted: boolean }
+  /** Alguém na sua AOI (ou você) reagiu. */
+  | { readonly t: 'emote_shown'; readonly netId: number; readonly kind: EmoteKind }
   | { readonly t: 'error'; readonly code: ErrorCode; readonly message: string; readonly ref?: ClientMsgType }
   | { readonly t: 'kicked'; readonly reason: 'removed_from_org' | 'replaced_by_new_tab' | 'abuse' | 'shutdown' };
 

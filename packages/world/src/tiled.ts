@@ -67,6 +67,14 @@ export interface Interactable {
   readonly zoneKey?: string;
 }
 
+/** Mobília/decoração visual (camada `props`). */
+export interface Prop {
+  readonly kind: string;
+  readonly rect: Rect;
+  readonly variant: number;
+  readonly color?: string;
+}
+
 export interface WorldMap {
   readonly widthTiles: number;
   readonly heightTiles: number;
@@ -80,6 +88,7 @@ export interface WorldMap {
   readonly zones: readonly PrivateZone[];
   readonly spawns: readonly Rect[];
   readonly interactables: readonly Interactable[];
+  readonly props: readonly Prop[];
   /** Zona privada do ponto (px), ou null = área aberta. O(1). */
   zoneAt(x: number, y: number): PrivateZone | null;
   /** Porta da zona (centro em px). */
@@ -224,6 +233,17 @@ export function loadWorldMap(tiled: TiledMap): WorldMap {
       }
   });
 
+  const props: Prop[] = objectsOf(MapLayers.Props).map((o) => {
+    const variant = prop(o, 'variant');
+    const color = str(o, 'color');
+    return {
+      kind: String(o.class ?? o.type ?? o.name),
+      rect: rectOf(o),
+      variant: typeof variant === 'number' ? variant : 0,
+      ...(color !== undefined ? { color } : {}),
+    };
+  });
+
   return {
     widthTiles: width,
     heightTiles: height,
@@ -233,6 +253,7 @@ export function loadWorldMap(tiled: TiledMap): WorldMap {
     zones,
     spawns,
     interactables,
+    props,
     zoneAt(x: number, y: number): PrivateZone | null {
       const tx = Math.floor(x / tilewidth);
       const ty = Math.floor(y / tilewidth);

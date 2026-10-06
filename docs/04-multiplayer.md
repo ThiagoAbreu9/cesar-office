@@ -218,6 +218,10 @@ sequenceDiagram
 - **Lote no Postgres:** um `INSERT … VALUES (…), (…)` a cada 200 ms por nó reduz round-trips; o ack só sai depois do commit (global/zona) para não confirmar o que pode se perder.
 - **Segurança:** texto puro; o cliente nunca usa `innerHTML`. Links detectados por regex e renderizados como `<a rel="noopener noreferrer" target="_blank">`.
 
+### 7.1 Reações (emotes, `03 M9`)
+
+`emote { kind }` do cliente → `MapInstance.emote` valida (não fantasma, intervalo P-18) e envia `emote_shown { netId, kind }` para a própria pessoa e para cada membro não fantasma da AOI. Não passa pelo barramento entre nós: AOI é local à instância. O `netId` (e não o `userId`) mantém a mensagem pequena e é o que o cliente já usa para achar a entidade. Mudança de contrato: `PROTOCOL_VERSION` 1 → 2.
+
 ## 8. Áudio por proximidade
 
 ### 8.1 Quem ouve quem

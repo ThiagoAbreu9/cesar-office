@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { AvatarLook } from '@cesar-office/protocol';
 import type { Backend, Joined } from './backend.ts';
 import { Badge } from './ui/Badge.tsx';
 import { Office } from './ui/Office.tsx';
@@ -8,10 +9,10 @@ type Stage = { kind: 'badge'; error?: string } | { kind: 'joining' } | { kind: '
 export function App({ backend }: { backend: Backend }) {
   const [stage, setStage] = useState<Stage>({ kind: 'badge' });
 
-  const enter = async (name: string, body: number): Promise<void> => {
+  const enter = async (name: string, look: AvatarLook): Promise<void> => {
     setStage({ kind: 'joining' });
     try {
-      const joined = await backend.join(name, body);
+      const joined = await backend.join(name, look);
       setStage({ kind: 'in', joined, name });
     } catch (e) {
       setStage({ kind: 'badge', error: e instanceof Error ? e.message : 'Não foi possível entrar agora.' });

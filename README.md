@@ -29,4 +29,6 @@ DEMO_MODE=true TICKET_SECRET=troque-por-um-segredo-de-32-caracteres ALLOWED_ORIG
 npm run dev -w @cesar-office/web                      # abra em duas abas
 ```
 
+No escritório: **WASD/setas** andam, **clique** leva até o ponto (ou senta, se for uma cadeira), **E** usa o que está perto, **1–6** reagem, **roda do mouse** aproxima. O minimapa no canto também leva você aonde clicar.
+
 Para outras máquinas da rede, defina `PUBLIC_WS_URL=ws://<ip>:4100/ws`, inclua a origem em `ALLOWED_ORIGINS` e abra `http://<ip>:5173/?server=http://<ip>:4100`. O áudio por proximidade só aparece com LiveKit configurado (`LIVEKIT_*`); sem ele, presença, conversa por proximidade e chat funcionam normalmente.

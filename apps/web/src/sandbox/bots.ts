@@ -11,6 +11,8 @@ import {
   peekOp,
   PROTOCOL_VERSION,
   WORLD,
+  type AvatarLook,
+  type EmoteKind,
   type ServerMsg,
 } from '@cesar-office/protocol';
 import { findPath, nearestFreeTile, type Interactable, type TilePoint, type WorldMap } from '@cesar-office/world';
@@ -20,22 +22,23 @@ type Role = 'recepcao' | 'copa' | 'reuniao' | 'mesa' | 'circula';
 
 interface Persona {
   readonly name: string;
-  readonly body: number;
+  readonly look: AvatarLook;
   readonly role: Role;
   readonly dnd?: boolean;
 }
 
+// look: body = tom de pele, hair = estilo + 5 × cor, outfit = roupa (apps/client/src/art/palette.ts)
 const PERSONAS: readonly Persona[] = [
-  { name: 'Rafael', body: 2, role: 'recepcao' },
-  { name: 'Ana', body: 1, role: 'copa' },
-  { name: 'Bruno', body: 0, role: 'copa' },
-  { name: 'Carla', body: 2, role: 'copa' },
-  { name: 'Diego', body: 0, role: 'reuniao' },
-  { name: 'Elisa', body: 1, role: 'reuniao' },
-  { name: 'Fernanda', body: 2, role: 'mesa', dnd: true },
-  { name: 'Gustavo', body: 0, role: 'mesa' },
-  { name: 'Helena', body: 1, role: 'circula' },
-  { name: 'Igor', body: 2, role: 'circula' },
+  { name: 'Rafael', look: { body: 2, hair: 0, outfit: 2 }, role: 'recepcao' },
+  { name: 'Ana', look: { body: 0, hair: 6, outfit: 3 }, role: 'copa' },
+  { name: 'Bruno', look: { body: 1, hair: 5, outfit: 0 }, role: 'copa' },
+  { name: 'Carla', look: { body: 3, hair: 2, outfit: 1 }, role: 'copa' },
+  { name: 'Diego', look: { body: 1, hair: 0, outfit: 5 }, role: 'reuniao' },
+  { name: 'Elisa', look: { body: 0, hair: 13, outfit: 4 }, role: 'reuniao' },
+  { name: 'Fernanda', look: { body: 2, hair: 8, outfit: 0 }, role: 'mesa', dnd: true },
+  { name: 'Gustavo', look: { body: 0, hair: 10, outfit: 2 }, role: 'mesa' },
+  { name: 'Helena', look: { body: 3, hair: 4, outfit: 3 }, role: 'circula' },
+  { name: 'Igor', look: { body: 1, hair: 12, outfit: 1 }, role: 'circula' },
 ];
 
 const GREETINGS = ['Oi! Chegou na hora do café.', 'E aí, tudo certo?', 'Bem-vindo! Puxa uma cadeira.', 'Olha quem apareceu!', 'Bom dia! Tá testando o escritório novo?'];
@@ -49,6 +52,15 @@ const pick = <X>(xs: readonly X[]): X => xs[Math.floor(Math.random() * xs.length
 /** Coordena os bots: quem é bot, quem cumprimenta quem (evita todos falarem ao mesmo tempo). */
 class Director {
   readonly botIds = new Set<string>();
+  readonly botNetIds = new Set<number>();
+  private lastEmoteReplyAt = 0;
+
+  shouldReplyEmote(): boolean {
+    if (Date.now() - this.lastEmoteReplyAt < 3_000) return false;
+    this.lastEmoteReplyAt = Date.now();
+    return true;
+  }
+
   private readonly greeted = new Map<string, number>();
   private lastReplyAt = 0;
   private readonly takenChairs = new Set<string>();
@@ -98,7 +110,13 @@ class Bot {
   }
 
   start(): void {
-    const spawn = this.spawnTile();
+    // Quem trabalha sentado já começa na cadeira (mesa ou sala), como quem chegou mais cedo.
+    if (this.p.role === 'reuniao') {
+      this.chair = this.director.claimChair(this.world.interactables.filter((i) => i.type === 'chair' && i.key.startsWith('chair-jatoba')));
+    } else if (this.p.role === 'mesa') {
+      this.chair = this.director.claimChair(this.world.interactables.filter((i) => i.type === 'chair' && i.deskKey));
+    }
+    const spawn = this.chair ? { tx: Math.floor(this.chair.x / T), ty: Math.floor(this.chair.y / T) } : this.spawnTile();
     const ws = this.server.connect();
     this.ws = ws;
     ws.onopen = () => {
@@ -106,7 +124,7 @@ class Bot {
         encodeControl({
           t: 'hello',
           v: PROTOCOL_VERSION,
-          ticket: this.server.ticket(this.userId, this.p.name, { body: this.p.body, hair: 0, outfit: 0 }, 'available', { x: (spawn.tx + 0.5) * T, y: (spawn.ty + 0.5) * T }),
+          ticket: this.server.ticket(this.userId, this.p.name, this.p.look, 'available', { x: (spawn.tx + 0.5) * T, y: (spawn.ty + 0.5) * T }),
         }),
       );
     };
@@ -126,6 +144,7 @@ class Bot {
   private onMessage(m: ServerMsg): void {
     switch (m.t) {
       case 'welcome':
+        this.director.botNetIds.add(m.netId);
         this.x = m.self.x;
         this.y = m.self.y;
         if (this.p.dnd) this.send({ t: 'set_status', status: 'dnd' });
@@ -142,7 +161,10 @@ class Bot {
         const next = new Set(m.peers.map((p) => p.userId));
         for (const id of next) {
           if (this.peers.has(id) || this.director.botIds.has(id) || this.p.dnd) continue;
-          if (this.director.shouldGreet(id)) window.setTimeout(() => this.say(pick(GREETINGS)), 1200 + Math.random() * 800);
+          if (this.director.shouldGreet(id)) {
+            window.setTimeout(() => this.emote('wave'), 600);
+            window.setTimeout(() => this.say(pick(GREETINGS)), 1200 + Math.random() * 800);
+          }
         }
         this.peers = next;
         return;
@@ -150,6 +172,14 @@ class Bot {
       case 'chat':
         if (m.channel === 'here' && !this.director.botIds.has(m.fromUserId) && !this.p.dnd && this.director.shouldReply()) {
           window.setTimeout(() => this.say(pick(REPLIES)), 1500 + Math.random() * 1500);
+          window.setTimeout(() => this.emote(pick(['thumbs', 'laugh', 'heart'] as const)), 900);
+        }
+        return;
+      case 'emote_shown':
+        // Alguém (humano) reagiu perto: um colega responde na mesma moeda.
+        if (!this.director.botNetIds.has(m.netId) && !this.p.dnd && this.director.shouldReplyEmote()) {
+          const back: EmoteKind = m.kind === 'wave' ? 'wave' : m.kind === 'coffee' ? 'coffee' : pick(['thumbs', 'laugh', 'heart'] as const);
+          window.setTimeout(() => this.emote(back), 700 + Math.random() * 600);
         }
         return;
       default:
@@ -158,12 +188,7 @@ class Bot {
   }
 
   private planInitial(): void {
-    if (this.p.role === 'reuniao') {
-      this.chair = this.director.claimChair(this.world.interactables.filter((i) => i.type === 'chair' && i.key.startsWith('chair-jatoba')));
-    } else if (this.p.role === 'mesa') {
-      this.chair = this.director.claimChair(this.world.interactables.filter((i) => i.type === 'chair' && i.deskKey));
-    }
-    if (this.chair) this.walkTo(Math.floor(this.chair.x / T), Math.floor(this.chair.y / T) - 1);
+    if (this.chair) this.send({ t: 'interact', objectKey: this.chair.key });
   }
 
   private tick(): void {
@@ -177,6 +202,10 @@ class Bot {
       this.wasMoving = false;
       if (this.chair && !this.seated) this.send({ t: 'interact', objectKey: this.chair.key });
     }
+    if (this.seated && this.p.role === 'reuniao' && !this.p.dnd && now > this.idleUntil) {
+      if (Math.random() < 0.5) this.emote(pick(['idea', 'thumbs'] as const));
+      this.idleUntil = now + 9000 + Math.random() * 9000;
+    }
     if (now < this.idleUntil || this.seated) return;
 
     if (this.p.role === 'circula') {
@@ -189,6 +218,7 @@ class Bot {
       const hub = this.copaHub();
       const t = nearestFreeTile(this.world, hub.tx + Math.round((Math.random() - 0.5) * 4), hub.ty + Math.round((Math.random() - 0.5) * 2), 3);
       if (t) this.walkTo(t.tx, t.ty);
+      if (Math.random() < 0.3) window.setTimeout(() => this.emote(pick(['coffee', 'laugh', 'coffee', 'idea'] as const)), 2500);
       this.idleUntil = now + 6000 + Math.random() * 8000;
     }
   }
@@ -225,6 +255,10 @@ class Bot {
     this.seq = (this.seq + 1) & 0xffff;
     const facing = this.path[0] ? (Math.abs(this.path[0].x - this.x) > Math.abs(this.path[0].y - this.y) ? (this.path[0].x < this.x ? 1 : 2) : this.path[0].y < this.y ? 3 : 0) : 0;
     this.ws?.send(encodeInput({ seq: this.seq, x: Math.round(this.x), y: Math.round(this.y), state: { facing: facing as 0 | 1 | 2 | 3, moving, sitting: false, ghost: false } }));
+  }
+
+  private emote(kind: EmoteKind): void {
+    this.send({ t: 'emote', kind });
   }
 
   private say(body: string): void {

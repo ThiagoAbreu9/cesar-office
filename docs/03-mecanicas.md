@@ -26,6 +26,9 @@ Toda regra de rede é visível no mapa. Tudo que se faz andando também se faz p
 | P-15 | Recálculo de bolhas no servidor | 250 ms | `02 §12` |
 | P-16 | Tamanho de mensagem de chat | 2.000 caracteres | Igual ao CHECK do banco |
 | P-17 | Rate de chat | 5 mensagens/s, rajada 10 | `02 §7` |
+| P-18 | Intervalo mínimo entre reações | 1,2 s por pessoa | Servidor recusa antes disso; a barra espera o mesmo tempo |
+| P-19 | Duração da reação sobre o avatar | 1,8 s | Só visual, não persiste |
+| P-20 | Duração do balão de fala | 6 s + 30 ms por caractere | Máximo de 90 caracteres no balão; a mensagem completa fica no chat |
 
 ## Máquina de estados do avatar
 
@@ -265,9 +268,33 @@ Status de presença é **ortogonal** à máquina acima (ver M4): um avatar pode 
 
 ---
 
+## M9 · Reações e balões de fala
+
+**Objetivo.** Dar retorno rápido sem interromper quem está falando: acenar ao chegar, "joinha" numa ideia, avisar que foi pegar café. E deixar visível, no mapa, o que foi dito no chat "Aqui".
+
+**Fluxo do usuário.** Tecla 1–6 ou clique na barra de reações → o ícone sobe sobre o avatar por P-19 para quem está na AOI. Mensagem no chat "Aqui" → balão sobre a cabeça de quem falou, para quem estava na conversa. Na copa, "E" na cafeteira mostra a reação de café.
+
+**Regras de negócio.**
+- RN-M9-1: Seis reações fixas (`wave`, `coffee`, `thumbs`, `laugh`, `heart`, `idea`). Lista fechada no protocolo: nada de texto livre, então não há moderação a fazer.
+- RN-M9-2: Quem vê: a própria pessoa e quem tem o avatar na AOI (`04 §2.2`). Fantasmas (P-10) não reagem nem recebem.
+- RN-M9-3: Intervalo mínimo P-18 por pessoa; antes disso o servidor responde `rate_limited` e não repassa.
+- RN-M9-4: Reagir conta como atividade (tira do Ausente automático, P-09), como andar.
+- RN-M9-5: O balão de fala usa a mesma audiência do chat "Aqui" (RN-M5): não cria canal novo nem amplia quem vê.
+- RN-M9-6: Em Não perturbe, a pessoa ainda reage; quem está em DND continua recebendo reações de quem está perto (são silenciosas).
+
+**Casos de uso.** Chegar na rodinha e acenar; concordar com quem está apresentando na sala sem abrir o microfone; avisar "fui ao café" com a xícara; celebrar um deploy no corredor.
+
+**Edge cases.** Duas reações seguidas → a segunda espera (botão desabilitado por P-18; tecla repetida recebe `rate_limited`, sem aviso na tela). Pessoa sai da AOI durante a animação → o ícone some junto com o avatar. Mensagem longa → balão corta em 90 caracteres com reticências. Várias mensagens seguidas → o balão é substituído, não empilha.
+
+**Critérios de sucesso.** ≥ 50% das pessoas ativas usam ao menos uma reação por dia na primeira semana; reação aparece para os vizinhos em < 200 ms (p95).
+
+**Escala.** Custo O(|AOI|) por reação, sem varrer a instância. Pior caso com P-18: 150 pessoas × 0,83 reação/s × ~30 vizinhos ≈ 3,7 mil mensagens de ~40 B por segundo por instância — menor que o tráfego de snapshots.
+
+---
+
 ## Futuro (fora do MVP, ver `01 §3`)
 
-Auditório com modo palco (V1), salas trancáveis e "bater na porta" (V1), emoji/wave/celebrate (V1), conquistas sem ranking de produtividade (V3), minigames na convivência (V3).
+Auditório com modo palco (V1), salas trancáveis e "bater na porta" (V1), celebrações em grupo (V1), conquistas sem ranking de produtividade (V3), minigames na convivência (V3).
 
 ## Para o multiplayer-engineer
 

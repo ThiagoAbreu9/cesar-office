@@ -24,6 +24,11 @@ export class KeyboardIntent implements IntentSource {
     this.keys = [...this.up, ...this.down, ...this.left, ...this.right];
   }
 
+  /** false enquanto o foco está num campo da interface (chat): teclas não andam nem reagem. */
+  get isEnabled(): boolean {
+    return this.enabled;
+  }
+
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (!enabled) for (const k of this.keys) k.reset();

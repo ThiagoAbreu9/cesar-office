@@ -168,7 +168,11 @@ Medir antes de otimizar mais: `game.loop.actualFps`, tempo de `RenderSystem.upda
 `apps/web` (React 18 + Vite) monta o jogo e a interface: crachá de entrada, HUD (lugar, status, microfone, sair), "Na conversa", "No escritório agora" com "Ir até", e chat Aqui / Todo o escritório. O pacote do cliente é consumido por `@cesar-office/client` (`src/index.ts`).
 
 - **Backend** (`apps/web/src/backend.ts`): `ServerBackend` entra pelo `POST /demo/join` e abre o WebSocket real; `SandboxBackend` roda o `RealtimeService` na página com bots (`src/sandbox/`).
-- **Arte provisória** (`scenes/placeholder-art.ts`): tileset e folhas de avatar 32 × 48 desenhados em canvas com a paleta do `06`. `createGame({ art: 'placeholder', inlineMap })` dispensa arquivos — é o que permite o build em arquivo único. Os assets reais substituem sem mudar cenas.
+- **Arte provisória** (`src/art/`): tileset com pisos por ambiente e paredes em 3/4 (`tiles.ts`), mobília da camada `props` (`props.ts`), avatares com contorno automático (`avatars.ts`). `createGame({ art: 'placeholder', inlineMap })` dispensa arquivos — é o que permite o build em arquivo único. Os assets reais substituem sem mudar cenas.
+- **Aparência** (`AvatarLibrary`): `look.body` = tom de pele (4), `look.hair` = estilo (5) + 5 × cor (3), `look.outfit` = roupa (6). Com arte gerada, uma folha por look, criada na primeira vez que alguém com aquele look aparece; com assets, uma folha por corpo.
+- **Balões e reações** (`OverheadSystem`): balão do chat "Aqui" sobre quem falou e reações (`emote_shown`) subindo sobre o avatar (`03 M9`).
+- **Câmera**: zoom 1,25×–3× (roda do mouse, `+`/`−`, botões do minimapa). **Minimapa** na interface (`art/minimap.ts`): planta do mapa + pontos da AOI; clique para andar.
+- **Clique em objeto**: clicar numa cadeira, quadro ou cafeteira anda até lá e usa ao chegar. Sentado, o avatar olha para a mesa (servidor e cliente usam a mesma regra).
 - **Rótulos** caem para `Text` quando a fonte bitmap `ui-8` não está carregada.
 - **Anel de conversa**: `WorldScene` desenha elipses sob você e sob quem você ouve, com linhas; quem fala fica verde (`media:speaking`).
 

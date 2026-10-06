@@ -45,6 +45,11 @@ export class WorldState {
     return this.meta.entries();
   }
 
+  /** Posição desenhada (px) — para o minimapa e a interface. */
+  positionOf(eid: EntityId): { x: number; y: number } {
+    return { x: RenderPosition.x[eid] ?? 0, y: RenderPosition.y[eid] ?? 0 };
+  }
+
   metaOf(eid: EntityId): EntityMeta | undefined {
     return this.meta.get(eid);
   }

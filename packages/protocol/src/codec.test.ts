@@ -84,3 +84,12 @@ test('controle: frame acima do limite falha antes do parse', () => {
   const big = encodeControl({ t: 'chat_send', channel: 'global', clientMsgId: '6f1c2c4e-8a43-4b5e-9a6f-0c2b1e9f4a11', body: 'a'.repeat(2000) });
   assert.equal(parseClientControl(big, 1024).ok, false);
 });
+
+test('controle: emote só aceita a lista fechada de reações', () => {
+  assert.equal(parseClientControl(encodeControl({ t: 'emote', kind: 'coffee' }), NET.MAX_CLIENT_FRAME_BYTES).ok, true);
+  const raw = new TextEncoder().encode(JSON.stringify({ t: 'emote', kind: '<script>' }));
+  const frame = new Uint8Array(raw.byteLength + 1);
+  frame[0] = 0x10;
+  frame.set(raw, 1);
+  assert.equal(parseClientControl(frame, NET.MAX_CLIENT_FRAME_BYTES).ok, false);
+});

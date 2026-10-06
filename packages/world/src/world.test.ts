@@ -96,3 +96,17 @@ test('Sede: mesa bloqueia passagem mas não som; parede bloqueia os dois', () =>
   assert.equal(m.grid.segmentWalkable(c1.x, c1.y, c3.x, c3.y), false);
   assert.equal(m.acoustics.segmentWalkable(c1.x, c1.y, c3.x, c3.y), true);
 });
+
+test('mapa Sede: props só visuais, sobre tiles bloqueados (mobília) ou parede/piso (decoração)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { loadWorldMap } = await import('./tiled.ts');
+  const sede = loadWorldMap(JSON.parse(readFileSync(new URL('../maps/sede.json', import.meta.url), 'utf8')));
+  const kinds = new Set(sede.props.map((p) => p.kind));
+  for (const k of ['desk-island', 'meeting-table', 'sofa', 'coffee', 'plant', 'rug']) assert.ok(kinds.has(k), `prop ${k}`);
+  const solid = sede.props.filter((p) => !['rug', 'wall-art', 'wall-clock', 'wall-logo'].includes(p.kind));
+  for (const p of solid) {
+    const cx = Math.floor((p.rect.x + p.rect.w / 2) / sede.tilePx);
+    const cy = Math.floor((p.rect.y + p.rect.h / 2) / sede.tilePx);
+    assert.ok(sede.grid.isBlockedTile(cx, cy), `${p.kind} em (${cx},${cy}) deveria estar sobre colisão`);
+  }
+});

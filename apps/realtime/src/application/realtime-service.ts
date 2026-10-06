@@ -146,6 +146,11 @@ export class RealtimeService {
         if (r !== 'ok') this.send(s, { t: 'error', code: r === 'not_found' ? 'not_found' : 'forbidden', message: r, ref: 'interact' });
         return;
       }
+      case 'emote': {
+        const r = h.instance.emote(userId, msg.kind, now);
+        if (r === 'rate_limited') this.send(s, { t: 'error', code: 'rate_limited', message: 'Calma, uma reação por vez', ref: 'emote' });
+        return;
+      }
       case 'claim_desk':
         return this.claimDesk(s, userId, h, msg.deskKey);
       case 'go_to': {

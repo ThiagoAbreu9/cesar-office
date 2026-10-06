@@ -5,15 +5,13 @@
 import Phaser from 'phaser';
 import { SceneKeys, type SceneServices } from './scene-keys.ts';
 import { TextureKeys } from '../world/map-contract.ts';
-import { animKey } from '../ecs/systems/render-system.ts';
-import { registerPlaceholderArt } from './placeholder-art.ts';
+import { registerDecorArt, registerPlaceholderArt } from './placeholder-art.ts';
 
 /** Corpos disponíveis no MVP (06 §6). */
 const AVATAR_BODIES = [0, 1, 2] as const;
 /** Spritesheet 32×48: linhas = direções (baixo, esquerda, direita, cima); colunas 0–3 walk; coluna 4 sit. */
 const FRAME_W = 32;
 const FRAME_H = 48;
-const COLS = 5;
 
 export function mapCacheKey(mapId: string, version: number): string {
   return `map-${mapId}-v${version}`;
@@ -57,24 +55,9 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
-    if (this.services.art === 'placeholder') registerPlaceholderArt(this.textures, AVATAR_BODIES);
-    for (const b of AVATAR_BODIES) this.createAvatarAnims(b);
+    if (this.services.art === 'placeholder') registerPlaceholderArt(this.textures);
+    else registerDecorArt(this.textures);
+    // Animações de avatar são criadas sob demanda pela AvatarLibrary (WorldScene).
     this.scene.start(SceneKeys.World, this.services);
-  }
-
-  private createAvatarAnims(body: number): void {
-    const tex = TextureKeys.Avatar(body);
-    for (let dir = 0; dir < 4; dir++) {
-      const row = dir * COLS;
-      const defs: [string, number[], number, number][] = [
-        [animKey(body, 'walk', dir), [row, row + 1, row + 2, row + 3], 8, -1],
-        [animKey(body, 'idle', dir), [row], 1, 0],
-        [animKey(body, 'sit', dir), [row + 4], 1, 0],
-      ];
-      for (const [key, frames, frameRate, repeat] of defs) {
-        if (this.anims.exists(key)) continue;
-        this.anims.create({ key, frames: this.anims.generateFrameNumbers(tex, { frames }), frameRate, repeat });
-      }
-    }
   }
 }

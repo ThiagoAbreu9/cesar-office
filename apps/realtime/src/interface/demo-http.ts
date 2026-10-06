@@ -1,7 +1,7 @@
 /**
  * Rotas HTTP auxiliares do realtime:
  * - `GET /maps/:id.json` — JSON Tiled público do mapa (o cliente carrega por aqui em dev/demo).
- * - `POST /demo/join` — MODO DEMO: entra só com um nome, sem conta. Emite um ticket de convidado
+ * - `POST /demo/join` — MODO DEMO: entra só com nome e aparência, sem conta. Emite um ticket de convidado
  *   para uma org/espaço fixos. Proibido em produção (config) e com limite por IP.
  *
  * Não há regra de negócio aqui: só emissão de ticket com os mesmos campos que a API emitiria.
@@ -32,7 +32,9 @@ export interface DemoHttpOptions {
 
 const JoinBody = z.object({
   name: z.string().trim().min(1).max(40),
-  body: z.number().int().min(0).max(2).default(0),
+  body: z.number().int().min(0).max(15).default(0),
+  hair: z.number().int().min(0).max(15).default(0),
+  outfit: z.number().int().min(0).max(15).default(0),
 });
 
 export class DemoHttp {
@@ -112,7 +114,7 @@ export class DemoHttp {
       mapId: DEMO.MAP_ID,
       role: 'member',
       displayName: parsed.name,
-      look: { body: parsed.body, hair: 0, outfit: 0 },
+      look: { body: parsed.body, hair: parsed.hair, outfit: parsed.outfit },
       status: 'available',
     });
     send(200, { wsUrl: this.o.publicWsUrl, ticket });

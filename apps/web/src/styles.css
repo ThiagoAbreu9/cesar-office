@@ -66,16 +66,17 @@ select {
   display: grid;
   place-items: center;
   padding: 48px 16px;
-  /* Porcelanato da recepção (mesmas cores do tile de piso) */
+  /* Piso de tábuas da área de trabalho (mesmas cores do tile do mapa) */
   background:
-    linear-gradient(90deg, #bfae8e 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(#bfae8e 1px, transparent 1px) 0 0 / 32px 32px,
-    #d9cbb0;
+    linear-gradient(#b98f63 1px, transparent 1px) 0 0 / 64px 8px,
+    linear-gradient(90deg, #b98f63 1px, transparent 1px) 0 0 / 64px 16px,
+    linear-gradient(90deg, transparent 31px, #b98f63 31px, #b98f63 32px, transparent 32px) 0 8px / 64px 16px,
+    #d2ae82;
 }
 
 .badge {
   position: relative;
-  width: min(420px, 100%);
+  width: min(460px, 100%);
   background: var(--paper);
   border: 2px solid var(--ink);
   border-radius: 14px;
@@ -123,7 +124,9 @@ select {
 }
 .badge-photo {
   width: 104px;
-  height: 152px;
+  height: 160px;
+  position: sticky;
+  top: 0;
   display: grid;
   place-items: end center;
   padding-bottom: 4px;
@@ -166,18 +169,20 @@ select {
 }
 .look {
   border: 0;
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   padding: 0;
 }
 .look-options {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .look-option {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 60px;
+  min-width: 34px;
+  height: 34px;
+  padding: 2px;
   border: 2px solid var(--ink);
   border-radius: var(--radius);
   background: var(--paper);
@@ -187,6 +192,13 @@ select {
   position: absolute;
   opacity: 0;
   pointer-events: none;
+}
+.swatch {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
 }
 .look-option.is-on {
   background: var(--ipe);
@@ -536,7 +548,7 @@ kbd {
   white-space: nowrap;
 }
 .toast {
-  top: 84px;
+  top: 124px;
   background: var(--ipe);
   box-shadow: var(--shadow);
   font-weight: 700;
@@ -600,5 +612,154 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .enter:active:not(:disabled) {
     transform: none;
+  }
+}
+
+/* ───────────── Reações, minimapa e ajuda ───────────── */
+
+.reactions {
+  position: absolute;
+  bottom: 14px;
+  left: calc((100% - 320px) / 2);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.reactions button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 54px;
+  padding: 0;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.reactions canvas {
+  width: 44px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+.reactions button:hover:not(:disabled) {
+  background: var(--paper-deep);
+  border-color: var(--ink);
+}
+.reactions button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.reactions button:disabled {
+  cursor: wait;
+  opacity: 0.45;
+}
+.reaction-key {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font: 700 11px/1 var(--font-pixel);
+  color: var(--ink-soft);
+}
+
+.prompt {
+  bottom: 86px;
+}
+
+.help {
+  bottom: auto;
+  top: 84px;
+  font-size: 12px;
+  padding: 4px 10px;
+  opacity: 0.85;
+}
+.help kbd {
+  min-width: 0;
+  margin: 0 2px 0 6px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--ink);
+}
+.help kbd:first-child {
+  margin-left: 0;
+}
+
+.minimap {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+}
+.minimap canvas {
+  display: block;
+  width: 216px;
+  height: auto;
+  image-rendering: pixelated;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  cursor: crosshair;
+}
+.minimap-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.minimap-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 2px 0 4px;
+  border: 1px solid var(--ink);
+  vertical-align: -1px;
+}
+.mm-me {
+  background: var(--ipe);
+}
+.mm-near {
+  background: var(--ok);
+}
+.zoom {
+  display: flex;
+  gap: 4px;
+}
+.zoom button {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  font: 700 16px/1 var(--font-body);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.zoom button:hover {
+  background: var(--ipe);
+}
+
+@media (max-width: 1100px) {
+  .minimap {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .reactions {
+    left: 50%;
+    bottom: calc(42% + 24px);
+  }
+  .reactions button {
+    width: 36px;
+    height: 36px;
+  }
+  .reaction-key {
+    display: none;
   }
 }

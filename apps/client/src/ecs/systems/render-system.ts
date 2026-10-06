@@ -8,12 +8,14 @@ import { unpackState, type PresenceStatus } from '@cesar-office/protocol';
 import { AvatarState, RenderPosition } from '../components.ts';
 import type { WorldState } from '../world-state.ts';
 import { Depth, TextureKeys } from '../../world/map-contract.ts';
+import { animKey, type AvatarLibrary } from '../../art/avatar-library.ts';
 
 interface View {
   sprite: Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.BitmapText | Phaser.GameObjects.Text;
   dot: Phaser.GameObjects.Image;
   animKey: string;
+  texture: string;
   status: PresenceStatus | null;
 }
 
@@ -24,14 +26,9 @@ const STATUS_TINT: Record<PresenceStatus, number> = {
   away: 0x8b949e,
 };
 
-const DIR_NAMES = ['down', 'left', 'right', 'up'] as const;
-const LABEL_OFFSET_Y = -30;
+const LABEL_OFFSET_Y = -32;
 const FADE_MS = 200;
 const GHOST_ALPHA = 0.4;
-
-export function animKey(body: number, kind: 'idle' | 'walk' | 'sit', facing: number): string {
-  return `${TextureKeys.Avatar(body)}-${kind}-${DIR_NAMES[facing & 3] ?? 'down'}`;
-}
 
 export class RenderSystem {
   private readonly views = new Map<number, View>();
@@ -40,6 +37,7 @@ export class RenderSystem {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly state: WorldState,
+    private readonly avatars: AvatarLibrary,
   ) {}
 
   update(teleported: ReadonlySet<number>): void {
@@ -67,7 +65,7 @@ export class RenderSystem {
           v.status = meta.status;
         }
         const kind = s.sitting ? 'sit' : s.moving ? 'walk' : 'idle';
-        const key = animKey(meta.look.body, kind, s.facing);
+        const key = animKey(v.texture, kind, s.facing);
         if (v.animKey !== key) {
           v.sprite.anims.play(key, true);
           v.animKey = key;
@@ -103,18 +101,20 @@ export class RenderSystem {
   private acquire(eid: number): void {
     this.release(eid); // id reciclado pelo bitECS no mesmo frame
     const meta = this.state.metaOf(eid);
-    const body = meta?.look.body ?? 0;
+    const texture = this.avatars.ensure(meta?.look ?? { body: 0, hair: 0, outfit: 0 });
     let v = this.pool.pop();
     if (!v) {
       v = {
-        sprite: this.scene.add.sprite(0, 0, TextureKeys.Avatar(body)).setOrigin(0.5, 0.85),
+        sprite: this.scene.add.sprite(0, 0, texture).setOrigin(0.5, 0.85),
         label: this.makeLabel(),
         dot: this.scene.add.image(0, 0, TextureKeys.StatusDot).setDepth(Depth.Labels),
         animKey: '',
+        texture,
         status: null,
       };
     } else {
-      v.sprite.setTexture(TextureKeys.Avatar(body));
+      v.sprite.setTexture(texture);
+      v.texture = texture;
       v.animKey = '';
       v.status = null;
     }
@@ -129,7 +129,7 @@ export class RenderSystem {
       return this.scene.add.bitmapText(0, 0, TextureKeys.UiFont, '', 8).setOrigin(0.5, 1).setDepth(Depth.Labels);
     }
     return this.scene.add
-      .text(0, 0, '', { fontFamily: 'system-ui, sans-serif', fontSize: '9px', color: '#ffffff', backgroundColor: '#1B1F2Acc', padding: { x: 3, y: 1 } })
+      .text(0, 0, '', { fontFamily: '"Atkinson Hyperlegible", system-ui, sans-serif', fontSize: '9px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#1B1F2Ad9', padding: { x: 4, y: 1 } })
       .setResolution(4)
       .setOrigin(0.5, 1)
       .setDepth(Depth.Labels);

@@ -31,7 +31,7 @@ const join = (body: unknown): Promise<Response> =>
   fetch(`${base}/demo/join`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'http://ok.test' }, body: JSON.stringify(body) });
 
 test('entra só com o nome e recebe um ticket válido para o espaço demo', async () => {
-  const res = await join({ name: '  Thiago ', body: 1 });
+  const res = await join({ name: '  Thiago ', body: 1, hair: 7, outfit: 4 });
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('access-control-allow-origin'), 'http://ok.test');
   const { wsUrl, ticket } = (await res.json()) as { wsUrl: string; ticket: string };
@@ -41,12 +41,13 @@ test('entra só com o nome e recebe um ticket válido para o espaço demo', asyn
   assert.equal(claims.displayName, 'Thiago');
   assert.equal(claims.orgId, DEMO.ORG_ID);
   assert.equal(claims.instanceId, DEMO.INSTANCE_ID);
-  assert.equal(claims.look.body, 1);
+  assert.deepEqual(claims.look, { body: 1, hair: 7, outfit: 4 });
 });
 
 test('rejeita nome vazio ou longo demais', async () => {
   assert.equal((await join({ name: '   ' })).status, 400);
   assert.equal((await join({ name: 'x'.repeat(41) })).status, 400);
+  assert.equal((await join({ name: 'ok', hair: 99 })).status, 400);
 });
 
 test('origem fora da lista não recebe cabeçalho CORS', async () => {

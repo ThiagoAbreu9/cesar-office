@@ -6,12 +6,14 @@
  * sentar, "Ir até" e status. Puro: sem rede, sem relógio global, sem LiveKit — tudo entra por portas.
  */
 import {
+  Facing,
   packState,
   WORLD,
   type AvatarLook,
   type AvatarState,
   type AudiblePeer,
   type CorrectionReason,
+  type EmoteKind,
   type EntityInfo,
   type EntityUpdate,
   type InputFrame,
@@ -51,6 +53,8 @@ export interface InstanceConfig {
   readonly interactRadiusPx: number;
   /** Além desta distância (px), entidades vão a 5 Hz em vez de 10 Hz (LOD, 04 §2.2). */
   readonly lodRadiusPx: number;
+  /** Intervalo mínimo entre emotes da mesma pessoa (ms). Evita "spam" de reações. */
+  readonly emoteCooldownMs: number;
 }
 
 export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
@@ -62,6 +66,7 @@ export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
   netIdReuseDelayMs: 60_000,
   interactRadiusPx: 1.5 * WORLD.TILE_PX + 8,
   lodRadiusPx: 16 * WORLD.TILE_PX, // ≈ meia largura da tela com zoom 2× (06 §1)
+  emoteCooldownMs: 1_200,
 };
 
 export interface JoinRequest {
@@ -106,6 +111,7 @@ interface Avatar {
   cellDirty: boolean;
   audible: Map<string, number>;
   bubbleId: string | null;
+  lastEmoteAt: number;
 }
 
 const stateKey = (x: number, y: number, packed: number): number => x * 2 ** 24 + y * 2 ** 8 + packed;
@@ -236,6 +242,7 @@ export class MapInstance {
       cellDirty: true,
       audible: new Map(),
       bubbleId: null,
+      lastEmoteAt: -Infinity,
     };
     this.byUser.set(a.userId, a);
     this.byNet.set(netId, a);
@@ -320,9 +327,42 @@ export class MapInstance {
     this.releaseChair(a);
     this.chairs.set(it.key, userId);
     a.chairKey = it.key;
-    a.state = { ...a.state, moving: false, sitting: true };
+    a.state = { ...a.state, facing: this.chairFacing(it.x, it.y, a.state.facing), moving: false, sitting: true };
     this.teleport(a, it.x, it.y, now);
     return 'ok';
+  }
+
+  /**
+   * Reação rápida: aparece sobre o avatar para quem o vê (a própria pessoa + AOI).
+   * Fantasmas não reagem. Custo O(|AOI|), sem varrer a instância.
+   */
+  emote(userId: string, kind: EmoteKind, now: number): 'ok' | 'not_found' | 'rate_limited' {
+    const a = this.byUser.get(userId);
+    if (!a || a.ghostSince !== null) return 'not_found';
+    if (now - a.lastEmoteAt < this.cfg.emoteCooldownMs) return 'rate_limited';
+    a.lastEmoteAt = now;
+    a.lastInputAt = now;
+    if (a.autoStatus === 'away') this.setAutoStatus(a, null);
+    const msg: ServerMsg = { t: 'emote_shown', netId: a.netId, kind };
+    this.out.control(a.userId, msg);
+    for (const id of a.aoi) {
+      const b = this.byNet.get(id);
+      if (b && b.ghostSince === null) this.out.control(b.userId, msg);
+    }
+    return 'ok';
+  }
+
+  /** Quem senta olha para a mesa: o lado bloqueado (mesa) ao lado da cadeira. */
+  private chairFacing(x: number, y: number, current: Facing): Facing {
+    const t = this.map.tilePx;
+    const tx = Math.floor(x / t);
+    const ty = Math.floor(y / t);
+    const g = this.map.grid;
+    if (g.isBlockedTile(tx, ty + 1)) return Facing.Down;
+    if (g.isBlockedTile(tx, ty - 1)) return Facing.Up;
+    if (g.isBlockedTile(tx - 1, ty)) return Facing.Left;
+    if (g.isBlockedTile(tx + 1, ty)) return Facing.Right;
+    return current;
   }
 
   /** "Ir até" (RN-M6-1/2): ao lado do alvo, na mesma zona; alvo em zona privada → porta da zona. */

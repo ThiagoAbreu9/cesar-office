@@ -215,3 +215,19 @@ test('LOD: vizinho distante vai a 5 Hz; próximo a 10 Hz', () => {
   // 1º tick: mudança de estado (parado → andando) sai na hora; depois só ticks pares.
   assert.equal(counts.get(far.netId), 6);
 });
+
+test('emote: aparece para quem está perto e para quem reagiu; longe não recebe; cooldown', () => {
+  const { out, inst } = setup();
+  const a = join(inst, 'ana');
+  join(inst, 'bia');
+  join(inst, 'caio', { x: 60 * T + 16, y: 36 * T + 16 }); // copa, fora da AOI da recepção
+  inst.step(0);
+  out.clear();
+  assert.equal(inst.emote('ana', 'wave', 1000), 'ok');
+  assert.deepEqual(out.of('bia', 'emote_shown'), [{ t: 'emote_shown', netId: a.netId, kind: 'wave' }]);
+  assert.equal(out.of('ana', 'emote_shown').length, 1);
+  assert.equal(out.of('caio', 'emote_shown').length, 0);
+  assert.equal(inst.emote('ana', 'heart', 1500), 'rate_limited');
+  assert.equal(inst.emote('ana', 'heart', 2300), 'ok');
+  assert.equal(inst.emote('ninguem', 'wave', 3000), 'not_found');
+});

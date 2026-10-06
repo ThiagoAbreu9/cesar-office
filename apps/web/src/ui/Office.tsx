@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createGame, type GameEvents } from '@cesar-office/client';
 import type { PresenceStatus, ServerMsgOf } from '@cesar-office/protocol';
 import type { Joined } from '../backend.ts';
+import { MiniMap } from './MiniMap.tsx';
+import { Reactions } from './Reactions.tsx';
 
 type Channel = 'here' | 'global';
 type ChatMsg = ServerMsgOf<'chat'>;
@@ -96,6 +98,7 @@ export function Office({ joined, name, sandbox, onLeave }: { joined: Joined; nam
     setMessages((xs) => [...xs.slice(-199), m]);
     setUnread((u) => (m.channel === tab ? u : { ...u, [m.channel]: u[m.channel] + 1 }));
   });
+  useBus(joined, 'world:prop-used', ({ kind }) => flash(kind === 'coffee' ? 'Café servido. Quem estiver perto vê a sua xícara.' : 'Partida rápida no fliperama da copa.'));
   useBus(joined, 'kicked', ({ reason }) => flash(reason === 'replaced_by_new_tab' ? 'Você abriu o escritório em outra aba.' : 'Você saiu do escritório.'));
 
   const toastTimer = useRef<number | null>(null);
@@ -245,7 +248,11 @@ export function Office({ joined, name, sandbox, onLeave }: { joined: Joined; nam
           <kbd>E</kbd> {prompt}
         </p>
       )}
-      <p className="help">Setas ou WASD para andar · clique no chão para ir até lá</p>
+      <Reactions joined={joined} />
+      <MiniMap joined={joined} audible={audible} />
+      <p className="help">
+        <kbd>WASD</kbd> andar <kbd>E</kbd> usar <kbd>1–6</kbd> reagir · roda do mouse aproxima
+      </p>
       {toast && (
         <p className="toast" role="status">
           {toast}

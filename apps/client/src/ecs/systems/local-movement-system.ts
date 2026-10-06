@@ -54,6 +54,14 @@ export class LocalMovementSystem {
     Correction.startedAt[eid] = 0;
   }
 
+  /** Sentou (o servidor já posicionou na cadeira): mostra sentado até a próxima tecla de movimento. */
+  sit(facing: Facing): void {
+    const eid = this.state.localEntity;
+    if (eid === null) return;
+    const prev = unpackState(AvatarState.packed[eid] ?? 0);
+    AvatarState.packed[eid] = packState({ ...prev, facing, moving: false, sitting: true });
+  }
+
   /** Um passo fixo de simulação. dtMs tipicamente 1000/60. */
   step(dtMs: number): void {
     const eid = this.state.localEntity;

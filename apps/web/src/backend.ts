@@ -5,6 +5,7 @@
  */
 import { AudioMedia, createBrowserSession, EventBus, GameSession, type GameEvents, type Timers } from '@cesar-office/client';
 import { loadWorldMap, type TiledMap } from '@cesar-office/world';
+import type { AvatarLook } from '@cesar-office/protocol';
 
 export interface Joined {
   readonly session: GameSession;
@@ -17,7 +18,7 @@ export interface Joined {
 
 export interface Backend {
   readonly kind: 'server' | 'sandbox';
-  join(name: string, body: number): Promise<Joined>;
+  join(name: string, look: AvatarLook): Promise<Joined>;
 }
 
 const timers: Timers = {
@@ -58,11 +59,11 @@ export class ServerBackend implements Backend {
   readonly kind = 'server';
   constructor(private readonly httpBase: string) {}
 
-  async join(name: string, body: number): Promise<Joined> {
+  async join(name: string, look: AvatarLook): Promise<Joined> {
     const res = await fetch(`${this.httpBase}/demo/join`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name, body }),
+      body: JSON.stringify({ name, ...look }),
     }).catch(() => {
       throw new Error(`Não encontrei o servidor em ${this.httpBase}. Ele está rodando com DEMO_MODE=true?`);
     });
@@ -98,7 +99,7 @@ export class SandboxBackend implements Backend {
   readonly kind = 'sandbox';
   constructor(private readonly map: TiledMap) {}
 
-  async join(name: string, body: number): Promise<Joined> {
+  async join(name: string, look: AvatarLook): Promise<Joined> {
     const [{ LocalServer }, { startBots }] = await Promise.all([import('./sandbox/local-server.ts'), import('./sandbox/bots.ts')]);
     const server = new LocalServer(this.map);
     server.start();
@@ -107,7 +108,7 @@ export class SandboxBackend implements Backend {
     const bus = new EventBus<GameEvents>();
     const session = new GameSession({ bus, createSocket: () => server.connect(), now: () => Date.now(), timers, random: Math.random });
     const ready = waitReady(bus);
-    session.start('loopback://sandbox', server.ticket(crypto.randomUUID(), name, { body, hair: 0, outfit: 0 }));
+    session.start('loopback://sandbox', server.ticket(crypto.randomUUID(), name, look));
     await ready;
     return {
       session,

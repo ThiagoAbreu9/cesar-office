@@ -97,7 +97,7 @@ CORS: só origens de `ALLOWED_ORIGINS` recebem `access-control-allow-origin`.
 
 ## 2. Protocolo WebSocket (serviço Realtime)
 
-Fonte da verdade: `packages/protocol/src` (`PROTOCOL_VERSION = 1`). Esta seção é gerada a partir dela — **se divergir, vale o código**.
+Fonte da verdade: `packages/protocol/src` (`PROTOCOL_VERSION = 2`; v2 adicionou reações). Esta seção é gerada a partir dela — **se divergir, vale o código**.
 
 Conexão: `wss://<nó>/ws`, frames **binários**, `binaryType = 'arraybuffer'`. Primeiro byte = opcode.
 
@@ -120,6 +120,7 @@ Conexão: `wss://<nó>/ws`, frames **binários**, `binaryType = 'arraybuffer'`. 
 | `ping` | `c` (relógio local) | A cada 5 s | — |
 | `set_status` | `status: available\|in_meeting\|away\|dnd` | Usuário muda status | ações 10/s |
 | `chat_send` | `channel: here\|global`, `clientMsgId` (UUID), `body` (1–2000) | Enviar mensagem | 5/s, rajada 10 |
+| `emote` | `kind: wave\|coffee\|thumbs\|laugh\|heart\|idea` | Reação sobre o avatar (`03 M9`) | 1 a cada 1,2 s (P-18); antes disso, `error rate_limited` |
 | `interact` | `objectKey` | Sentar, porta | ações 10/s |
 | `claim_desk` | `deskKey` | Tornar mesa sua | ações 10/s |
 | `go_to` | `targetUserId` | "Ir até" | ações 10/s |
@@ -147,6 +148,7 @@ Conexão: `wss://<nó>/ws`, frames **binários**, `binaryType = 'arraybuffer'`. 
 | `chat` | `id`, `channel`, `fromUserId`, `fromName`, `body`, `at` | Mensagem recebida |
 | `call_received` | `callId`, `fromUserId`, `fromName`, `expiresAt` | Alguém te chamou |
 | `call_result` | `callId`, `accepted` | Resposta ao seu chamado |
+| `emote_shown` | `netId`, `kind` | Você ou alguém na sua AOI reagiu |
 | `error` | `code`, `message`, `ref?` | Erro de requisição |
 | `kicked` | `reason: removed_from_org\|replaced_by_new_tab\|abuse\|shutdown` | Conexão será encerrada |
 

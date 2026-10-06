@@ -14,6 +14,11 @@ export const MapLayers = {
   Zones: 'zones',
   /** Camada de objetos: interativos (`door`, `chair`, `portal`). */
   Objects: 'objects',
+  /**
+   * Camada de objetos opcional: mobília e decoração desenhadas como sprites (classe = tipo, ex.
+   * `sofa`, `desk-island`). Só visual — o servidor não usa; quem bloqueia é a camada `collision`.
+   */
+  Props: 'props',
 } as const;
 
 export const TilesetNames = {
