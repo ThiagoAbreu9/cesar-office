@@ -151,7 +151,7 @@ stateDiagram-v2
 - Queda: o avatar vira **ghost** (bit 4 do state), sai do áudio imediatamente, libera vaga de zona (RN da M3) e fica visível por 30 s.
 - Cliente tenta `resume{resumeToken, lastTick}` no mesmo `wsUrl` com backoff `0,5 s → 1 s → 2 s → 4 s` (±20% jitter).
 - Sucesso → `resumed{tick, entities, resumeToken}` com **snapshot completo da AOI** (mais simples e robusto que reenviar o delta perdido). O token é rotacionado a cada resume (uso único) e o novo vai no próprio `resumed`.
-- Nó morreu, token expirou ou instância fechou → `resume_rejected` (ou erro de conexão) → cliente pede novo ticket à API (`POST /spaces/:id/join`), que o coloca na instância certa.
+- Nó morreu, token expirou ou instância fechou → `resume_rejected` (ou erro de conexão) → cliente pede novo ticket à API (`POST /orgs/:orgId/spaces/:spaceId/join`), que o coloca na instância certa.
 
 **O que se perde numa reconexão.** Mensagens de chat "Aqui" de bolha aberta enviadas durante a queda (não persistidas por design). Chat de zona e global são recuperados por histórico.
 

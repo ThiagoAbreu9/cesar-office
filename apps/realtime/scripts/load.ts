@@ -19,7 +19,7 @@ import {
   WORLD,
 } from '@cesar-office/protocol';
 import { findPath, loadWorldMap, type TiledMap } from '@cesar-office/world';
-import { HmacTicketCodec } from '../src/infrastructure/ticket.ts';
+import { HmacTicketCodec } from '@cesar-office/ticket';
 
 const BOTS = Number(process.argv[2] ?? 150);
 const SECONDS = Number(process.argv[3] ?? 30);

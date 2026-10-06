@@ -16,7 +16,7 @@ Escritório virtual 2D pixel art multiplayer, **somente áudio**. Gerado pela eq
 | 07 | [PRD do MVP](07-prd-mvp.md) | technical-writer | Requisitos rastreados, critérios de lançamento |
 | 08 | [User stories](08-user-stories.md) | technical-writer | Épicos e critérios Gherkin |
 | 09 | [API](09-api.md) | technical-writer | REST + protocolo WebSocket |
-| ADR | [0001](adr/0001-phaser-4-no-cliente.md) · [0002](adr/0002-websocket-binario-sem-socketio.md) · [0003](adr/0003-livekit-sfu-salas-por-zona.md) · [0004](adr/0004-realtime-separado-afinidade-pela-api.md) · [0005](adr/0005-predicao-cliente-validacao-servidor.md) · [0006](adr/0006-multitenant-org-id-rls.md) · [0007](adr/0007-chat-de-bolha-nao-persistido.md) · [0008](adr/0008-produto-somente-audio.md) | — | Decisões arquiteturais |
+| ADR | [0001](adr/0001-phaser-4-no-cliente.md) · [0002](adr/0002-websocket-binario-sem-socketio.md) · [0003](adr/0003-livekit-sfu-salas-por-zona.md) · [0004](adr/0004-realtime-separado-afinidade-pela-api.md) · [0005](adr/0005-predicao-cliente-validacao-servidor.md) · [0006](adr/0006-multitenant-org-id-rls.md) · [0007](adr/0007-chat-de-bolha-nao-persistido.md) · [0008](adr/0008-produto-somente-audio.md) · [0009](adr/0009-api-fastify-sem-nestjs.md) | — | Decisões arquiteturais |
 
 ## Leitura por perfil
 
@@ -32,12 +32,19 @@ Escritório virtual 2D pixel art multiplayer, **somente áudio**. Gerado pela eq
 | `packages/world` | Colisão, acústica (só paredes), A*, leitura/validação de mapas Tiled; mapa **Sede** gerado da planta de 06 §3 | `tsc` ✓ · 9 testes |
 | `apps/realtime` | **Servidor completo de nó único**: tickets, instâncias, movimento validado, zonas, AOI + LOD, ghost/resume, áudio por proximidade, chat, presença, chamados, mesas, LiveKit só-áudio | `tsc` ✓ · 25 testes de domínio + 11 ponta a ponta · carga com 150 bots (02 §5.4) |
 | `apps/client` | Cliente Phaser 4 + bitECS + camada de áudio LiveKit | `tsc` ✓ · 12 testes |
-| `apps/api` | Não iniciado (emite os tickets que o realtime aceita) | — |
+| `packages/ticket` | Ticket de entrada (JWT HS256, uso único): a API assina, o realtime verifica | `tsc` ✓ · 4 testes |
+| `apps/api` | Fastify + PostgreSQL com RLS: login de desenvolvimento, sessões com refresh rotativo e detecção de reuso, conta e LGPD (exportar/excluir), orgs, convites, papéis, espaços e `join` | `tsc` ✓ · 14 testes em Postgres real (PGlite) + 2 de cadeia completa API → realtime |
 
 ```bash
 npm install
 npm run typecheck          # todos os pacotes
-npm test                   # 65 testes
+npm test                   # 85 testes
+
+# API (Postgres local; o mesmo TICKET_SECRET do realtime)
+cd apps/api
+MIGRATION_DATABASE_URL=postgres://postgres@localhost/cesar node --experimental-transform-types src/migrate.ts
+DATABASE_URL=postgres://cesar_api@localhost/cesar ACCESS_TOKEN_SECRET=$(openssl rand -hex 32) TICKET_SECRET=<mesmo do realtime> \
+  REALTIME_PUBLIC_URL=ws://localhost:4100/ws AUTH_DEV_LOGIN=true node --experimental-transform-types src/main.ts
 
 # servidor realtime local (sem LiveKit = sem áudio, o resto funciona)
 cd apps/realtime
@@ -59,6 +66,7 @@ Diagramas: 13 blocos Mermaid validados com o parser oficial (mermaid 11). DDL de
 | 6 | `CollisionGrid` só no cliente | 04 §4 × 05 | phaser-specialist + multiplayer-engineer | ✅ Movido para `packages/world`, usado pelos dois lados |
 | 7 | "Andar 1 · sala 2" para instância confunde com mapa/andar | 00 × 03 M1 | game-designer | Aberto |
 | 8 | Preços de infraestrutura e LiveKit não verificados | 01 §3, 02 §9 | product-manager | Aberto |
+| 10 | RLS com `current_setting(...)::uuid` quebrava com pool de conexões (variável revertida vira `''`) | 02 §6.3 | software-architect | ✅ Corrigido com `NULLIF` (pego pelos testes da API) |
 | 9 | Estimativa de banda (0,85 KB/s) muito abaixo do medido (5,3 KB/s) no mapa Sede | 02 §5.4 | software-architect | ✅ Números medidos registrados; RNF-05 revisto em 07 |
 
 ## Questões abertas consolidadas

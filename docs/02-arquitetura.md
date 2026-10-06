@@ -31,7 +31,7 @@ flowchart LR
   end
 
   CDN["CDN / Vercel<br/>assets estáticos, mapas, tilesets"]
-  API["API<br/>NestJS, stateless"]
+  API["API<br/>Fastify, stateless"]
   RT["Realtime<br/>Node + WebSocket<br/>instâncias de mapa em memória"]
   SFU["LiveKit SFU<br/>somente áudio"]
   PG[("PostgreSQL<br/>dados persistentes")]
@@ -81,14 +81,14 @@ flowchart TB
 - `domain` é TypeScript puro, sem `ws`, sem Redis, sem Nest. É onde ficam as regras do `03-mecanicas` e é 100% testável com relógio falso.
 - `application` orquestra casos de uso e declara **portas** (`MediaAuthorizer`, `ChatRepository`, `PresencePublisher`).
 - `infrastructure` implementa portas. Trocar LiveKit por outro SFU = nova implementação de `MediaAuthorizer`.
-- A API (NestJS) segue a mesma separação: módulos Nest são a camada de interface; casos de uso e entidades não importam `@nestjs/*`.
+- A API (Fastify, ADR-0009) segue a mesma separação: as rotas são a camada de interface; casos de uso e entidades não importam Fastify.
 
 Monorepo:
 
 ```
 apps/
   client/        React + Phaser
-  api/           NestJS
+  api/           Fastify + pg
   realtime/      Node + ws
 packages/
   protocol/      contrato cliente↔realtime (tipos + codec), versionado
@@ -112,7 +112,7 @@ sequenceDiagram
   G-->>A: id_token
   A->>A: upsert user, verifica membership da org
   A-->>B: access token 15 min + refresh token em cookie httpOnly
-  B->>A: POST /spaces/:id/join
+  B->>A: POST /orgs/:org/spaces/:id/join
   A->>R: busca instância do mapa com vaga
   alt nenhuma instância com vaga
     A->>R: reserva nova instância no nó menos carregado
@@ -176,7 +176,7 @@ sequenceDiagram
     RT-->>C: Resumed com snapshot completo da AOI
   else expirou ou nó morreu
     RT-->>C: ResumeRejected
-    C->>C: refaz POST /spaces/:id/join
+    C->>C: refaz POST /orgs/:org/spaces/:id/join
   end
 ```
 
@@ -460,7 +460,8 @@ CREATE TABLE audit_log (
 CREATE INDEX audit_org_time_idx ON audit_log (org_id, at DESC);
 
 -- RLS: defesa em profundidade. A aplicação já filtra por org; o banco garante.
--- A API abre transação e executa: SET LOCAL app.org_id = '<uuid>';
+-- A API abre transação e executa: SELECT set_config('app.org_id', '<uuid>', true);
+-- NULLIF: fora da transação a variável vale NULL ou '' (revertida, comum com pool) → zero linhas, sem erro.
 ALTER TABLE spaces            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maps              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE desk_assignments  ENABLE ROW LEVEL SECURITY;
@@ -469,17 +470,17 @@ ALTER TABLE chat_messages     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log         ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON spaces
-  USING (org_id = current_setting('app.org_id')::uuid);
+  USING (org_id = NULLIF(current_setting('app.org_id', true), '')::uuid);
 CREATE POLICY tenant_isolation ON maps
-  USING (org_id = current_setting('app.org_id')::uuid);
+  USING (org_id = NULLIF(current_setting('app.org_id', true), '')::uuid);
 CREATE POLICY tenant_isolation ON desk_assignments
-  USING (org_id = current_setting('app.org_id')::uuid);
+  USING (org_id = NULLIF(current_setting('app.org_id', true), '')::uuid);
 CREATE POLICY tenant_isolation ON user_space_state
-  USING (org_id = current_setting('app.org_id')::uuid);
+  USING (org_id = NULLIF(current_setting('app.org_id', true), '')::uuid);
 CREATE POLICY tenant_isolation ON chat_messages
-  USING (org_id = current_setting('app.org_id')::uuid);
+  USING (org_id = NULLIF(current_setting('app.org_id', true), '')::uuid);
 CREATE POLICY tenant_isolation ON audit_log
-  USING (org_id = current_setting('app.org_id')::uuid);
+  USING (org_id = NULLIF(current_setting('app.org_id', true), '')::uuid);
 -- O papel da aplicação NÃO pode ser owner das tabelas nem ter BYPASSRLS.
 ```
 

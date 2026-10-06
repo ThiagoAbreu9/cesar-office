@@ -23,7 +23,7 @@ import {
 import { RealtimeService } from '../src/application/realtime-service.ts';
 import type { MediaGateway } from '../src/application/ports.ts';
 import { Gateway } from '../src/interface/ws-gateway.ts';
-import { HmacTicketCodec } from '../src/infrastructure/ticket.ts';
+import { HmacTicketCodec } from '@cesar-office/ticket';
 import { InMemoryChatStore, InMemoryDeskRepository, InMemoryOrgBus } from '../src/infrastructure/memory-adapters.ts';
 import { cryptoIds, FileMapRepository, silentLogger, systemClock } from '../src/infrastructure/system.ts';
 

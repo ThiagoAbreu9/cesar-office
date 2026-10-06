@@ -12,7 +12,8 @@
     "@cesar-office/world": "0.1.0",
     "livekit-server-sdk": "^2.19.1",
     "ws": "^8.22.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@cesar-office/ticket": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

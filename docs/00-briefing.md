@@ -19,7 +19,7 @@ Referências visuais (estilo apenas, nunca assets): Stardew Valley, Pokémon (in
 |---|---|
 | Escala | Projetar para **milhares de usuários simultâneos no total**, com até **~300 por instância de espaço** no V1. MVP valida 100 por espaço. |
 | Plataforma | Navegador desktop (Chrome/Edge/Firefox/Safari recentes). Mobile = somente leitura de chat no MVP. |
-| Stack base | TypeScript ponta a ponta. React + Phaser 4 no cliente; Node.js (NestJS para API) no servidor; PostgreSQL; Redis; WebSocket; WebRTC via SFU **somente para áudio**. |
+| Stack base | TypeScript ponta a ponta. React + Phaser 4 no cliente; Node.js no servidor (API em Fastify — ADR-0009); PostgreSQL; Redis; WebSocket; WebRTC via SFU **somente para áudio**. |
 | Arquitetura | Clean Architecture / camadas explícitas; domínio sem dependência de framework; contrato de rede em pacote compartilhado (`packages/protocol`). |
 | Segurança | Multi-tenant por organização desde o dia 1 (`org_id` em toda tabela de negócio + RLS como defesa em profundidade). |
 | Mídia | **Somente áudio.** Sem câmera, sem vídeo e sem compartilhamento de tela (decisão de 2026-10-06). |

@@ -5,6 +5,8 @@
 ## 1. REST (serviço API)
 
 Base: `https://api.<domínio>/v1` · JSON · autenticação por `Authorization: Bearer <access token>` (15 min); refresh por cookie `httpOnly`.
+
+**Implementado em `apps/api`** (Fastify, ADR-0009), exceto o login Google e as rotas de presença, histórico de chat e auditoria, que dependem do Redis/Postgres compartilhado com o realtime. Papéis não vão no token: são lidos do banco a cada requisição, então rebaixar alguém vale na hora.
 Toda rota com `:orgId` exige membership; rotas marcadas **admin** exigem papel `admin` ou `owner`.
 
 ### Erros (RFC 9457 `application/problem+json`)
@@ -28,9 +30,10 @@ Toda rota com `:orgId` exige membership; rotas marcadas **admin** exigem papel `
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/auth/google` | Inicia OAuth (PKCE); redireciona ao Google |
-| GET | `/auth/google/callback` | Troca o code; cria/atualiza usuário; define cookie de refresh; redireciona ao app |
-| POST | `/auth/refresh` | Rotaciona refresh token (detecta reuso) → `{ accessToken, expiresAt }` |
+| POST | `/auth/dev-login` | **Só desenvolvimento** (`AUTH_DEV_LOGIN=true`, proibido em produção): `{ email, displayName? }` → sessão. Some (404) quando desligado |
+| GET | `/auth/google` | *Próxima etapa.* Inicia OAuth (PKCE); redireciona ao Google |
+| GET | `/auth/google/callback` | *Próxima etapa.* Troca o code; cria/atualiza usuário; define cookie de refresh; redireciona ao app |
+| POST | `/auth/refresh` | Lê o cookie `co_rt` (httpOnly, SameSite=Strict, path `/v1/auth`), rotaciona e devolve `{ userId, accessToken, expiresAt }`. Reusar um refresh antigo revoga a família inteira de sessões |
 | POST | `/auth/logout` | Revoga refresh token |
 | GET | `/me` | Perfil + memberships |
 | PATCH | `/me` | `{ displayName?, avatar? }` |
@@ -42,6 +45,7 @@ Toda rota com `:orgId` exige membership; rotas marcadas **admin** exigem papel `
 
 | Método | Rota | Papel | Descrição |
 |---|---|---|---|
+| POST | `/orgs` | qualquer usuário | `{ name, allowedEmailDomain? }` → cria a org; quem cria vira `owner` |
 | GET | `/orgs/:orgId` | membro | Dados da org |
 | PATCH | `/orgs/:orgId` | admin | `{ name?, allowedEmailDomain?, chatRetentionDays? (1–3650) }` |
 | GET | `/orgs/:orgId/members?cursor&limit` | membro | Lista paginada |
@@ -56,13 +60,13 @@ Toda rota com `:orgId` exige membership; rotas marcadas **admin** exigem papel `
 | Método | Rota | Papel | Descrição |
 |---|---|---|---|
 | GET | `/orgs/:orgId/spaces` | membro | Espaços da org |
-| GET | `/spaces/:spaceId` | membro | Espaço + mapas |
-| **POST** | **`/spaces/:spaceId/join`** | membro | Escolhe instância e emite ticket (`02 §4.1`) |
-| POST | `/spaces/:spaceId/maps` | admin | Upload de mapa Tiled; validado conforme `06 §2` |
+| POST | `/orgs/:orgId/spaces` | admin | `{ name }` → cria espaço com o mapa padrão `sede` |
+| **POST** | **`/orgs/:orgId/spaces/:spaceId/join`** | membro | Escolhe instância e emite ticket (`02 §4.1`). A org vai no caminho para o RLS saber o tenant antes de qualquer consulta |
+| POST | `/orgs/:orgId/spaces/:spaceId/maps` | admin | *Próxima etapa.* Upload de mapa Tiled; validado conforme `06 §2` (`loadWorldMap`) |
 | PUT | `/maps/:mapId/objects/:objectKey` | admin | Configura portal `{ url }` (https, domínio na lista da org) |
 | DELETE | `/maps/:mapId/desks/:deskKey` | admin | Libera mesa (reivindicar é pelo WebSocket: `claim_desk`) |
 
-Resposta de `POST /spaces/:spaceId/join`:
+Resposta de `POST /orgs/:orgId/spaces/:spaceId/join` (`cache-control: no-store`):
 
 ```json
 {

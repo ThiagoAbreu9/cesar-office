@@ -1,13 +1,34 @@
 /**
- * Ticket de entrada (02 §4.1): JWT HS256 de 30 s, uso único (nonce `jti`).
- * Implementado com node:crypto — sem dependência — e com comparação em tempo constante.
+ * Ticket de entrada no realtime (02 §4.1): JWT HS256 de 30 s, uso único (nonce `jti`).
+ * A API assina (`sign`), o realtime verifica (`verify`) — mesmo código nos dois lados.
+ * node:crypto, sem dependências, comparação de assinatura em tempo constante.
  *
- * O nonce fica em memória neste nó; com vários nós, `NonceStore` passa a ser Redis (`SET NX EX 30`).
+ * O nonce fica em memória; com vários nós realtime, `NonceStore` passa a ser Redis (`SET NX EX 30`).
  */
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { PresenceStatus } from '@cesar-office/protocol';
-import type { TicketClaims, TicketVerifier } from '../application/ports.ts';
+import type { AvatarLook, PresenceStatus as PresenceStatusT } from '@cesar-office/protocol';
+
+/** Conteúdo do ticket emitido pela API em POST /spaces/:id/join. */
+export interface TicketClaims {
+  readonly userId: string;
+  readonly orgId: string;
+  readonly spaceId: string;
+  readonly instanceId: string;
+  /** Chave do asset do mapa (`maps.asset_key`), ex.: "sede". */
+  readonly mapId: string;
+  readonly role: 'owner' | 'admin' | 'member';
+  readonly displayName: string;
+  readonly look: AvatarLook;
+  readonly status: PresenceStatusT;
+  readonly lastPosition?: { readonly x: number; readonly y: number };
+}
+
+export interface TicketVerifier {
+  /** Valida assinatura e expiração e CONSOME o nonce (uso único). null = inválido. */
+  verify(ticket: string): Promise<TicketClaims | null>;
+}
 
 const b64url = (b: Buffer | string): string => Buffer.from(b).toString('base64url');
 
@@ -50,6 +71,7 @@ export interface TicketOptions {
 }
 
 export class HmacTicketCodec implements TicketVerifier {
+  readonly ttlSeconds: number;
   private readonly key: Buffer;
   private readonly ttlMs: number;
   private readonly now: () => number;
@@ -58,11 +80,12 @@ export class HmacTicketCodec implements TicketVerifier {
     if (opts.secret.length < 32) throw new Error('TICKET_SECRET precisa de ≥ 32 caracteres');
     this.key = Buffer.from(opts.secret, 'utf8');
     this.ttlMs = opts.ttlMs ?? 30_000;
+    this.ttlSeconds = Math.ceil(this.ttlMs / 1000);
     this.now = opts.now ?? Date.now;
   }
 
   /** Usado pela API (e por testes/ferramentas de dev). */
-  sign(c: TicketClaims & { readonly spaceId: string }): string {
+  sign(c: TicketClaims): string {
     const iat = Math.floor(this.now() / 1000);
     const payload = {
       sub: c.userId,

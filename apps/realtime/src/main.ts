@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 import { loadConfig } from './config.ts';
 import { RealtimeService } from './application/realtime-service.ts';
 import { Gateway } from './interface/ws-gateway.ts';
-import { HmacTicketCodec } from './infrastructure/ticket.ts';
+import { HmacTicketCodec } from '@cesar-office/ticket';
 import { DisabledMedia, LiveKitAudioGateway } from './infrastructure/livekit-media.ts';
 import { InMemoryChatStore, InMemoryDeskRepository, InMemoryOrgBus } from './infrastructure/memory-adapters.ts';
 import { cryptoIds, FileMapRepository, jsonLogger, systemClock } from './infrastructure/system.ts';

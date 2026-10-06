@@ -2,27 +2,10 @@
  * Portas da camada de aplicação (02 §3). Implementações em `infrastructure/`.
  * Trocar LiveKit, Redis ou Postgres = nova implementação destas interfaces; nada acima muda.
  */
-import type { AvatarLook, PresenceStatus, ServerMsgOf } from '@cesar-office/protocol';
+import type { PresenceStatus, ServerMsgOf } from '@cesar-office/protocol';
 import type { WorldMap } from '@cesar-office/world';
 
-/** Conteúdo do ticket emitido pela API em POST /spaces/:id/join (02 §4.1). */
-export interface TicketClaims {
-  readonly userId: string;
-  readonly orgId: string;
-  readonly spaceId: string;
-  readonly instanceId: string;
-  readonly mapId: string;
-  readonly role: 'owner' | 'admin' | 'member';
-  readonly displayName: string;
-  readonly look: AvatarLook;
-  readonly status: PresenceStatus;
-  readonly lastPosition?: { readonly x: number; readonly y: number };
-}
-
-export interface TicketVerifier {
-  /** Valida assinatura e expiração e CONSOME o nonce (uso único). null = inválido. */
-  verify(ticket: string): Promise<TicketClaims | null>;
-}
+export type { TicketClaims, TicketVerifier } from '@cesar-office/ticket';
 
 export interface LoadedMap {
   readonly map: WorldMap;

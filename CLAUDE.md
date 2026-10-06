@@ -26,3 +26,5 @@ e depois o `technical-writer` para atualizar ADR/PRD.
 - Números (taxas de tick, limites, custos) têm uma fonte: o documento do dono. Os outros referenciam.
 - Código: TypeScript `strict`, sem `any`, domínio sem import de framework, testes para regras de negócio.
 - Contrato de rede só muda em `packages/protocol` e com bump de `PROTOCOL_VERSION`.
+- API (`apps/api`, ADR-0009): rotas só validam (zod) e chamam casos de uso; tabela com `org_id` só é tocada dentro de `uow.tenant(orgId, ...)`. Migração nova = arquivo novo em `apps/api/migrations` (nunca editar uma já aplicada).
+- Login: `AuthService.signIn(identity)` recebe identidade já verificada. Google entra como novo provedor, sem mexer nos casos de uso.
